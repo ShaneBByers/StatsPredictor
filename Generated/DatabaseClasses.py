@@ -42,6 +42,31 @@ class Divisions(Enum):
     abbreviation = 'ABBREVIATION'
 
 
+class Players(Enum):
+
+    @classmethod
+    def table_name(cls):
+        return 'PLAYERS'
+
+    @classmethod
+    def auto_increments(cls):
+        return []
+
+    @classmethod
+    def not_nulls(cls):
+        return ['ID', 'FULL_NAME', 'FIRST_NAME', 'LAST_NAME', 'BIRTH_DATE', 'HEIGHT', 'WEIGHT', 'SHOOTS', 'POSITION']
+
+    id = 'ID'
+    full_name = 'FULL_NAME'
+    first_name = 'FIRST_NAME'
+    last_name = 'LAST_NAME'
+    birth_date = 'BIRTH_DATE'
+    height = 'HEIGHT'
+    weight = 'WEIGHT'
+    shoots = 'SHOOTS'
+    position = 'POSITION'
+
+
 class Teams(Enum):
 
     @classmethod
@@ -125,6 +150,7 @@ class TranslationValues(Enum):
 
 DB_TABLES = {'CONFERENCES': Conferences,
              'DIVISIONS': Divisions,
+             'PLAYERS': Players,
              'TEAMS': Teams,
              'TRANSLATION_COLUMNS': TranslationColumns,
              'TRANSLATION_TABLES': TranslationTables,
