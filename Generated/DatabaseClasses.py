@@ -107,7 +107,28 @@ class TranslationColumns(Enum):
 
     id = 'ID'
     table_id = 'TABLE_ID'
+    group_id = 'GROUP_ID'
     ref_column = 'REF_COLUMN'
+
+
+class TranslationGroups(Enum):
+
+    @classmethod
+    def table_name(cls):
+        return 'TRANSLATION_GROUPS'
+
+    @classmethod
+    def auto_increments(cls):
+        return []
+
+    @classmethod
+    def not_nulls(cls):
+        return ['ID', 'VALUE_NO', 'IS_URL']
+
+    id = 'ID'
+    value_no = 'VALUE_NO'
+    value = 'VALUE'
+    is_url = 'IS_URL'
 
 
 class TranslationTables(Enum):
@@ -141,11 +162,12 @@ class TranslationValues(Enum):
 
     @classmethod
     def not_nulls(cls):
-        return ['COLUMN_ID', 'VALUE_NO']
+        return ['COLUMN_ID', 'VALUE_NO', 'IS_URL']
 
     column_id = 'COLUMN_ID'
     value_no = 'VALUE_NO'
     value = 'VALUE'
+    is_url = 'IS_URL'
 
 
 DB_TABLES = {'CONFERENCES': Conferences,
@@ -153,5 +175,6 @@ DB_TABLES = {'CONFERENCES': Conferences,
              'PLAYERS': Players,
              'TEAMS': Teams,
              'TRANSLATION_COLUMNS': TranslationColumns,
+             'TRANSLATION_GROUPS': TranslationGroups,
              'TRANSLATION_TABLES': TranslationTables,
              'TRANSLATION_VALUES': TranslationValues}
