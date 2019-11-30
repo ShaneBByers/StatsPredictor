@@ -1,8 +1,8 @@
 import logging
 import Constants
-import Modifiers
 from database import database
 from WebManager import WebManager
+from Modifiers import Modifier
 from Generated.DatabaseClasses import *
 
 
@@ -26,6 +26,9 @@ class DataManager:
         else:
             self.web_manager = None
 
+        self.modifier = Modifier(logger_name,
+                                 self.db_manager)
+
     def update_classes_file(self, file_name):
         self.db_manager.update_classes_file(file_name)
 
@@ -35,9 +38,26 @@ class DataManager:
     def insert_players(self):
         self.insert_from_web("PLAYERS")
 
-    def insert_from_web(self, table_name):
+    def insert_seasons(self):
+        self.insert_from_web("SEASONS")
+
+    def insert_games(self, current_season=True):
+        season_select = database.entity(Seasons)
+        if current_season:
+            season_select.add_where(Seasons.is_current, True)
+        season = self.db_manager.select_single(season_select)
+        start_date = self.modifier.date_to_date_string(season.get(Seasons.start_date))
+        end_date = self.modifier.date_to_date_string(season.get(Seasons.end_date))
+        self.insert_from_web("GAMES", [start_date, end_date])
+
+    def insert_from_web(self, table_name, modify_args=None):
         translation_table, translations = self.get_translations(DB_TABLES[table_name])
-        json = self.web_manager.get(translation_table.get(TranslationTables.url_path))
+        if modify_args is None:
+            json = self.web_manager.get(translation_table.get(TranslationTables.url_path))
+        else:
+            new_get = translation_table.get(TranslationTables.url_path)
+            new_get = self.modifier.modify(translation_table.get(TranslationTables.modifier), (new_get, modify_args))
+            json = self.web_manager.get(new_get)
         all_groups_web_values = []
         for group_id, translations_tuple in translations.items():
             all_groups_web_values.append(self.parse_json(json, translations_tuple, 1, 0))
@@ -57,7 +77,6 @@ class DataManager:
         self.db_manager.insert(insert_values)
 
     def parse_json(self, json, translations, group_counter, value_counter, col_entity=None):
-
         if group_counter <= len(translations[0]):
             translation_index = group_counter - 1
             group_counter += 1
@@ -70,12 +89,13 @@ class DataManager:
             if col_entity.get(TranslationColumns.modifier) is None:
                 return json
             else:
-                return Modifiers.modifiers[col_entity.get(TranslationColumns.modifier)](json)
+                return self.modifier.modify(col_entity.get(TranslationColumns.modifier), json)
 
         if group_counter == len(translations[0]) + 1 and value_counter == 1:
             return_dict = {}
             for col in translations[1].keys():
-                return_dict[col.get(TranslationColumns.ref_column)] = self.parse_json(json, translations, group_counter, value_counter, col)
+                result = self.parse_json(json, translations, group_counter, value_counter, col)
+                return_dict[col.get(TranslationColumns.ref_column)] = result
             return return_dict
         else:
             entity_list = translations[after_group]
@@ -91,8 +111,8 @@ class DataManager:
                         return_values.append(inner_result)
                 return return_values
             elif entity_list[translation_index].get(TranslationValues.is_url):
-                url_var = entity_list[translation_index].get(TranslationValues.value)
-                url_var = url_var.replace("%", str(json))
+                url_var = self.modifier.replace_string(entity_list[translation_index].get(TranslationValues.value),
+                                                       str(json))
                 new_json = self.web_manager.get(url_var)
                 return self.parse_json(new_json, translations, group_counter, value_counter, col_entity)
             else:

@@ -42,6 +42,26 @@ class Divisions(Enum):
     abbreviation = 'ABBREVIATION'
 
 
+class Games(Enum):
+
+    @classmethod
+    def table_name(cls):
+        return 'GAMES'
+
+    @classmethod
+    def auto_increments(cls):
+        return []
+
+    @classmethod
+    def not_nulls(cls):
+        return ['ID', 'HOME_TEAM_ID', 'AWAY_TEAM_ID', 'DATE_TIME']
+
+    id = 'ID'
+    home_team_id = 'HOME_TEAM_ID'
+    away_team_id = 'AWAY_TEAM_ID'
+    date_time = 'DATE_TIME'
+
+
 class Players(Enum):
 
     @classmethod
@@ -65,6 +85,27 @@ class Players(Enum):
     weight = 'WEIGHT'
     shoots = 'SHOOTS'
     position = 'POSITION'
+
+
+class Seasons(Enum):
+
+    @classmethod
+    def table_name(cls):
+        return 'SEASONS'
+
+    @classmethod
+    def auto_increments(cls):
+        return []
+
+    @classmethod
+    def not_nulls(cls):
+        return ['ID']
+
+    id = 'ID'
+    start_date = 'START_DATE'
+    end_date = 'END_DATE'
+    game_amount = 'GAME_AMOUNT'
+    is_current = 'IS_CURRENT'
 
 
 class Teams(Enum):
@@ -149,6 +190,7 @@ class TranslationTables(Enum):
     id = 'ID'
     ref_table = 'REF_TABLE'
     url_path = 'URL_PATH'
+    modifier = 'MODIFIER'
 
 
 class TranslationValues(Enum):
@@ -173,7 +215,9 @@ class TranslationValues(Enum):
 
 DB_TABLES = {'CONFERENCES': Conferences,
              'DIVISIONS': Divisions,
+             'GAMES': Games,
              'PLAYERS': Players,
+             'SEASONS': Seasons,
              'TEAMS': Teams,
              'TRANSLATION_COLUMNS': TranslationColumns,
              'TRANSLATION_GROUPS': TranslationGroups,
