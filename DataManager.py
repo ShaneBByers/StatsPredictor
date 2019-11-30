@@ -1,5 +1,6 @@
 import logging
 import Constants
+import Modifiers
 from database import database
 from WebManager import WebManager
 from Generated.DatabaseClasses import *
@@ -37,10 +38,6 @@ class DataManager:
     def insert_from_web(self, table_name):
         translation_table, translations = self.get_translations(DB_TABLES[table_name])
         json = self.web_manager.get(translation_table.get(TranslationTables.url_path))
-        parse_values = {}
-        # for col, values in translations.items():
-        #     web_values = self.parse_json(json, values, 1)
-        #     parse_values[col.get(TranslationColumns.ref_column)] = web_values
         all_groups_web_values = []
         for group_id, translations_tuple in translations.items():
             all_groups_web_values.append(self.parse_json(json, translations_tuple, 1, 0))
@@ -57,81 +54,50 @@ class DataManager:
                 if col_name.value in web_value:
                     insert_value.set(col_name, web_value[col_name.value])
             insert_values.append(insert_value)
-        # insert_values = None
-        # for parse_index, parse_value in parse_values.items():
-        #     if insert_values is None:
-        #         insert_values = []
-        #         for _ in parse_value:
-        #             insert_values.append(database.entity(DB_TABLES[table_name]))
-        #     for col_name in DB_TABLES[table_name]:
-        #         if col_name.value == parse_index:
-        #             for val_index in range(len(parse_value)):
-        #                 insert_values[val_index].set(col_name, parse_value[val_index])
         self.db_manager.insert(insert_values)
 
-    def parse_json(self, json, translations, group_counter, value_counter, col_name=None):
+    def parse_json(self, json, translations, group_counter, value_counter, col_entity=None):
+
         if group_counter <= len(translations[0]):
             translation_index = group_counter - 1
             group_counter += 1
             after_group = False
-        elif value_counter == 0 or value_counter <= len(translations[1][col_name]):
+        elif value_counter == 0 or value_counter <= len(translations[1][col_entity]):
             translation_index = value_counter - 1
             value_counter += 1
             after_group = True
         else:
-            return json
+            if col_entity.get(TranslationColumns.modifier) is None:
+                return json
+            else:
+                return Modifiers.modifiers[col_entity.get(TranslationColumns.modifier)](json)
 
         if group_counter == len(translations[0]) + 1 and value_counter == 1:
             return_dict = {}
             for col in translations[1].keys():
-                return_dict[col] = self.parse_json(json, translations, group_counter, value_counter, col)
+                return_dict[col.get(TranslationColumns.ref_column)] = self.parse_json(json, translations, group_counter, value_counter, col)
             return return_dict
         else:
             entity_list = translations[after_group]
-            if col_name is not None:
-                entity_list = entity_list[col_name]
+            if col_entity is not None:
+                entity_list = entity_list[col_entity]
             if entity_list[translation_index].get(TranslationValues.value) is None:
                 return_values = []
                 for json_value in json:
-                    inner_result = self.parse_json(json_value, translations, group_counter, value_counter, col_name)
+                    inner_result = self.parse_json(json_value, translations, group_counter, value_counter, col_entity)
                     if isinstance(inner_result, list):
                         return_values.extend(inner_result)
                     else:
                         return_values.append(inner_result)
-                    # return_values.extend(list(self.parse_json(json_value, translations, translation_counter + 1)))
                 return return_values
             elif entity_list[translation_index].get(TranslationValues.is_url):
                 url_var = entity_list[translation_index].get(TranslationValues.value)
                 url_var = url_var.replace("%", str(json))
                 new_json = self.web_manager.get(url_var)
-                return self.parse_json(new_json, translations, group_counter, value_counter, col_name)
+                return self.parse_json(new_json, translations, group_counter, value_counter, col_entity)
             else:
                 new_json = json[entity_list[translation_index].get(TranslationValues.value)]
-                return self.parse_json(new_json, translations, group_counter, value_counter, col_name)
-
-    # def parse_json(self, json, translations, translation_counter):
-    #     translation_index = translation_counter - 1
-    #     if translation_index >= len(translations):
-    #         return json
-    #     else:
-    #         if translations[translation_index].get(TranslationValues.value) is None:
-    #             return_values = []
-    #             for json_value in json:
-    #                 inner_result = self.parse_json(json_value, translations, translation_counter + 1)
-    #                 if isinstance(inner_result, list):
-    #                     return_values.extend(inner_result)
-    #                 else:
-    #                     return_values.append(inner_result)
-    #                 # return_values.extend(list(self.parse_json(json_value, translations, translation_counter + 1)))
-    #             return return_values
-    #         elif translations[translation_index].get(TranslationValues.is_url):
-    #             url_var = translations[translation_index].get(TranslationValues.value)
-    #             url_var = url_var.replace("%", str(json))
-    #             new_json = self.web_manager.get(url_var)
-    #             return self.parse_json(new_json, translations, translation_counter + 1)
-    #         else:
-    #             new_json = json[translations[translation_index].get(TranslationValues.value)]
-    #             return self.parse_json(new_json, translations, translation_counter + 1)
+                return self.parse_json(new_json, translations, group_counter, value_counter, col_entity)
 
     def get_translations(self, table):
         translation_table = self.get_translation_table(table)
@@ -141,17 +107,13 @@ class DataManager:
             new_group_id = col.get(TranslationColumns.group_id)
             if new_group_id not in translations:
                 group_values = self.get_translation_group_values(new_group_id)
-                col_values = {col.get(TranslationColumns.ref_column): self.get_translation_values(col.get(TranslationColumns.id))}
+                col_values = {col: self.get_translation_values(col.get(TranslationColumns.id))}
                 translations[new_group_id] = (group_values, col_values)
             else:
                 col_values = translations[new_group_id][1]
-                col_values[col.get(TranslationColumns.ref_column)] = self.get_translation_values(col.get(TranslationColumns.id))
+                col_values[col] = self.get_translation_values(col.get(TranslationColumns.id))
                 translations[new_group_id] = (translations[new_group_id][0], col_values)
-                # translations[new_group_id][1].append(self.get_translation_values(col.get(TranslationColumns.id)))
 
-        # translations = {}
-        # for col in translation_columns:
-        #     translations[col] = self.get_translation_values(col.get(TranslationColumns.id))
         return_value = (translation_table, translations)
         return return_value
 

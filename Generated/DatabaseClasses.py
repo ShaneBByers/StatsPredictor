@@ -109,6 +109,7 @@ class TranslationColumns(Enum):
     table_id = 'TABLE_ID'
     group_id = 'GROUP_ID'
     ref_column = 'REF_COLUMN'
+    modifier = 'MODIFIER'
 
 
 class TranslationGroups(Enum):
