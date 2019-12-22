@@ -33,13 +33,16 @@ class DataManager:
         self.db_manager.update_classes_file(file_name)
 
     def insert_teams(self):
-        self.insert_from_web("TEAMS")
+        insert_values = self.get_web_values("TEAMS")
+        self.db_manager.insert(insert_values)
 
     def insert_players(self):
-        self.insert_from_web("PLAYERS")
+        insert_values = self.get_web_values("PLAYERS")
+        self.db_manager.insert(insert_values)
 
     def insert_seasons(self):
-        self.insert_from_web("SEASONS")
+        insert_values = self.get_web_values("SEASONS")
+        self.db_manager.insert(insert_values)
 
     def insert_games(self, current_season=True):
         season_select = database.entity(Seasons)
@@ -48,33 +51,76 @@ class DataManager:
         season = self.db_manager.select_single(season_select)
         start_date = self.modifier.date_to_date_string(season.get(Seasons.start_date))
         end_date = self.modifier.date_to_date_string(season.get(Seasons.end_date))
-        self.insert_from_web("GAMES", [start_date, end_date])
-
-    def insert_from_web(self, table_name, modify_args=None):
-        translation_table, translations = self.get_translations(DB_TABLES[table_name])
-        if modify_args is None:
-            json = self.web_manager.get(translation_table.get(TranslationTables.url_path))
-        else:
-            new_get = translation_table.get(TranslationTables.url_path)
-            new_get = self.modifier.modify(translation_table.get(TranslationTables.modifier), (new_get, modify_args))
-            json = self.web_manager.get(new_get)
-        all_groups_web_values = []
-        for group_id, translations_tuple in translations.items():
-            all_groups_web_values.append(self.parse_json(json, translations_tuple, 1, 0))
-        if len(all_groups_web_values) > 1:
-            for i in range(len(all_groups_web_values)):
-                if i != 0:
-                    for j in range(len(all_groups_web_values[0])):
-                        all_groups_web_values[0][j].update(all_groups_web_values[i][j])
-        web_values = all_groups_web_values[0]
-        insert_values = []
-        for web_value in web_values:
-            insert_value = database.entity(DB_TABLES[table_name])
-            for col_name in DB_TABLES[table_name]:
-                if col_name.value in web_value:
-                    insert_value.set(col_name, web_value[col_name.value])
-            insert_values.append(insert_value)
+        season_id = season.get(Seasons.id)
+        insert_values = self.get_web_values("GAMES", [start_date, end_date], {'SEASON_ID': season_id})
+        teams = self.db_manager.select_all(database.entity(Teams))
+        team_ids = []
+        for team in teams:
+            team_ids.append(team.get(Teams.id))
+        remove_game_ids = []
+        for insert_value in insert_values:
+            if insert_value.get(Games.team_id) not in team_ids:
+                remove_game_ids.append(insert_value.get(Games.id))
+        remove_games = []
+        for remove_game_id in remove_game_ids:
+            for insert_value in insert_values:
+                if remove_game_id == insert_value.get(Games.id):
+                    remove_games.append(insert_value)
+        for remove_game in remove_games:
+            insert_values.remove(remove_game)
         self.db_manager.insert(insert_values)
+
+    def insert_team_stats(self, current_season=True):
+        season_select = database.entity(Seasons)
+        if current_season:
+            season_select.add_where(Seasons.is_current, True)
+        season = self.db_manager.select_single(season_select)
+        games_select = database.entity(Games)
+        games_select.add_where(Games.season_id, season.get(Seasons.id))
+        games_select.add_where(Games.is_home, True)
+        games = self.db_manager.select_all(games_select)
+        insert_values = []
+        translations_dict = self.get_translations(DB_TABLES["TEAM_STATS"])
+        for game in games:
+            insert_values.extend(self.get_web_values("TEAM_STATS",
+                                                     modify_args=(game.get(Games.id)),
+                                                     additional_vals=None,
+                                                     translations_dict=translations_dict))
+        self.db_manager.insert(insert_values)
+
+    def get_web_values(self, table_name, modify_args=None, additional_vals=None, translations_dict=None):
+        return_values = []
+        if translations_dict is None:
+            translations_dict = self.get_translations(DB_TABLES[table_name])
+        for translation_table, translations in translations_dict.items():
+            if modify_args is None:
+                json = self.web_manager.get(translation_table.get(TranslationTables.url_path))
+            else:
+                new_get = translation_table.get(TranslationTables.url_path)
+                new_get = self.modifier.modify(translation_table.get(TranslationTables.modifier), (new_get, modify_args))
+                json = self.web_manager.get(new_get)
+            all_groups_web_values = []
+            for group_id, translations_tuple in translations.items():
+                result = self.parse_json(json, translations_tuple, 1, 0)
+                if not isinstance(result, list):
+                    result = [result]
+                all_groups_web_values.append(result)
+            if len(all_groups_web_values) > 1:
+                for i in range(len(all_groups_web_values)):
+                    if i != 0:
+                        for j in range(len(all_groups_web_values[0])):
+                            all_groups_web_values[0][j].update(all_groups_web_values[i][j])
+            web_values = all_groups_web_values[0]
+            if additional_vals is not None:
+                for web_value in web_values:
+                    web_value.update(additional_vals)
+            for web_value in web_values:
+                insert_value = database.entity(DB_TABLES[table_name])
+                for col_name in DB_TABLES[table_name]:
+                    if col_name.value in web_value:
+                        insert_value.set(col_name, web_value[col_name.value])
+                return_values.append(insert_value)
+        return return_values
 
     def parse_json(self, json, translations, group_counter, value_counter, col_entity=None):
         if group_counter <= len(translations[0]):
@@ -94,7 +140,10 @@ class DataManager:
         if group_counter == len(translations[0]) + 1 and value_counter == 1:
             return_dict = {}
             for col in translations[1].keys():
-                result = self.parse_json(json, translations, group_counter, value_counter, col)
+                if col.get(TranslationColumns.immediate) is not None:
+                    result = self.modifier.immediate(col.get(TranslationColumns.immediate))
+                else:
+                    result = self.parse_json(json, translations, group_counter, value_counter, col)
                 return_dict[col.get(TranslationColumns.ref_column)] = result
             return return_dict
         else:
@@ -120,27 +169,29 @@ class DataManager:
                 return self.parse_json(new_json, translations, group_counter, value_counter, col_entity)
 
     def get_translations(self, table):
-        translation_table = self.get_translation_table(table)
-        translation_columns = self.get_translation_columns(translation_table.get(TranslationTables.id))
-        translations = {}
-        for col in translation_columns:
-            new_group_id = col.get(TranslationColumns.group_id)
-            if new_group_id not in translations:
-                group_values = self.get_translation_group_values(new_group_id)
-                col_values = {col: self.get_translation_values(col.get(TranslationColumns.id))}
-                translations[new_group_id] = (group_values, col_values)
-            else:
-                col_values = translations[new_group_id][1]
-                col_values[col] = self.get_translation_values(col.get(TranslationColumns.id))
-                translations[new_group_id] = (translations[new_group_id][0], col_values)
+        translation_tables = self.get_translation_tables(table)
+        return_translations = {}
+        for translation_table in translation_tables:
+            translation_columns = self.get_translation_columns(translation_table.get(TranslationTables.id))
+            translations = {}
+            for col in translation_columns:
+                new_group_id = col.get(TranslationColumns.group_id)
+                if new_group_id not in translations:
+                    group_values = self.get_translation_group_values(new_group_id)
+                    col_values = {col: self.get_translation_values(col.get(TranslationColumns.id))}
+                    translations[new_group_id] = (group_values, col_values)
+                else:
+                    col_values = translations[new_group_id][1]
+                    col_values[col] = self.get_translation_values(col.get(TranslationColumns.id))
+                    translations[new_group_id] = (translations[new_group_id][0], col_values)
+            return_translations[translation_table] = translations
 
-        return_value = (translation_table, translations)
-        return return_value
+        return return_translations
 
-    def get_translation_table(self, table):
+    def get_translation_tables(self, table):
         translation_table_select = database.entity(TranslationTables)
         translation_table_select.add_where(TranslationTables.ref_table, table.table_name())
-        return self.db_manager.select_single(translation_table_select)
+        return self.db_manager.select_all(translation_table_select)
 
     def get_translation_columns(self, table_id):
         translation_column_select = database.entity(TranslationColumns)

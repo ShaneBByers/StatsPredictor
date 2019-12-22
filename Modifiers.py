@@ -22,9 +22,9 @@ class Modifier:
         return_string = string
         if isinstance(new_substr, list):
             for new_val in new_substr:
-                return_string = return_string.replace(old_substr, new_val, 1)
+                return_string = return_string.replace(old_substr, str(new_val), 1)
         else:
-            return_string = return_string.replace(old_substr, new_substr)
+            return_string = return_string.replace(old_substr, str(new_substr))
         self.logger.info("Modified " + string + " to " + return_string)
         return return_string
 
@@ -50,6 +50,21 @@ class Modifier:
         height_int = int(feet) * 12 + int(inches)
         self.logger.info("Modified " + height_string + " to " + str(height_int))
         return height_int
+
+    def immediate(self, val):
+        if val == "True":
+            self.logger.info("Parsed " + val + " as bool(True)")
+            return True
+        elif val == "False":
+            self.logger.info("Parsed " + val + " as bool(False)")
+            return False
+        try:
+            return_val = int(val)
+            self.logger.info("Parsed " + val + " as int(" + str(return_val) + ")")
+            return return_val
+        except ValueError:
+            self.logger.info("Could not parse " + val + " as bool or int")
+            return val
 
     modifiers = {'replace_string': replace_string,
                  'date_string_to_date': date_string_to_date,
