@@ -52,7 +52,7 @@ class DataManager:
         start_date = self.modifier.date_to_date_string(season.get(Seasons.start_date))
         end_date = self.modifier.date_to_date_string(season.get(Seasons.end_date))
         season_id = season.get(Seasons.id)
-        insert_values = self.get_web_values("GAMES", [start_date, end_date], {'SEASON_ID': season_id})
+        insert_values = self.get_web_values("GAMES", [start_date, end_date], {"SEASON_ID": season_id})
         teams = self.db_manager.select_all(database.entity(Teams))
         team_ids = []
         for team in teams:
@@ -88,6 +88,24 @@ class DataManager:
                                                      translations_dict=translations_dict))
         self.db_manager.insert(insert_values)
 
+    def insert_player_stats(self, current_season=True):
+        season_select = database.entity(Seasons)
+        if current_season:
+            season_select.add_where(Seasons.is_current, True)
+        season = self.db_manager.select_single(season_select)
+        games_select = database.entity(Games)
+        games_select.add_where(Games.season_id, season.get(Seasons.id))
+        games_select.add_where(Games.is_home, True)
+        games = self.db_manager.select_all(games_select)
+        insert_values = []
+        translations_dict = self.get_translations(DB_TABLES["PLAYER_STATS"])
+        for game in games:
+            insert_values.extend(self.get_web_values("PLAYER_STATS",
+                                                     modify_args=(game.get(Games.id)),
+                                                     additional_vals={"GAME_ID": game.get(Games.id)},
+                                                     translations_dict=translations_dict))
+        self.db_manager.insert(insert_values)
+
     def get_web_values(self, table_name, modify_args=None, additional_vals=None, translations_dict=None):
         return_values = []
         if translations_dict is None:
@@ -105,12 +123,17 @@ class DataManager:
                 if not isinstance(result, list):
                     result = [result]
                 all_groups_web_values.append(result)
+            longest_index = 0
             if len(all_groups_web_values) > 1:
                 for i in range(len(all_groups_web_values)):
-                    if i != 0:
-                        for j in range(len(all_groups_web_values[0])):
-                            all_groups_web_values[0][j].update(all_groups_web_values[i][j])
-            web_values = all_groups_web_values[0]
+                    if len(all_groups_web_values[i]) > len(all_groups_web_values[longest_index]):
+                        longest_index = i
+                for i in range(len(all_groups_web_values)):
+                    if i != longest_index:
+                        for j in range(len(all_groups_web_values[longest_index])):
+                            for k in range(len(all_groups_web_values[i])):
+                                all_groups_web_values[longest_index][j].update(all_groups_web_values[i][k])
+            web_values = all_groups_web_values[longest_index]
             if additional_vals is not None:
                 for web_value in web_values:
                     web_value.update(additional_vals)
@@ -144,7 +167,8 @@ class DataManager:
                     result = self.modifier.immediate(col.get(TranslationColumns.immediate))
                 else:
                     result = self.parse_json(json, translations, group_counter, value_counter, col)
-                return_dict[col.get(TranslationColumns.ref_column)] = result
+                if result is not None:
+                    return_dict[col.get(TranslationColumns.ref_column)] = result
             return return_dict
         else:
             entity_list = translations[after_group]
@@ -152,12 +176,24 @@ class DataManager:
                 entity_list = entity_list[col_entity]
             if entity_list[translation_index].get(TranslationValues.value) is None:
                 return_values = []
+                if isinstance(json, dict):
+                    json = list(json.values())
                 for json_value in json:
                     inner_result = self.parse_json(json_value, translations, group_counter, value_counter, col_entity)
-                    if isinstance(inner_result, list):
-                        return_values.extend(inner_result)
-                    else:
-                        return_values.append(inner_result)
+                    if inner_result is not None:
+                        if isinstance(inner_result, list):
+                            return_values.extend(inner_result)
+                        else:
+                            return_values.append(inner_result)
+                longest_length = 0
+                for i in range(len(return_values)):
+                    if len(return_values[i]) > longest_length:
+                        longest_length = len(return_values[i])
+                new_return_values = []
+                for return_val in return_values:
+                    if len(return_val) == longest_length:
+                        new_return_values.append(return_val)
+                return_values = new_return_values
                 return return_values
             elif entity_list[translation_index].get(TranslationValues.is_url):
                 url_var = self.modifier.replace_string(entity_list[translation_index].get(TranslationValues.value),
@@ -165,8 +201,12 @@ class DataManager:
                 new_json = self.web_manager.get(url_var)
                 return self.parse_json(new_json, translations, group_counter, value_counter, col_entity)
             else:
-                new_json = json[entity_list[translation_index].get(TranslationValues.value)]
-                return self.parse_json(new_json, translations, group_counter, value_counter, col_entity)
+                search_value = entity_list[translation_index].get(TranslationValues.value)
+                if search_value in json:
+                    new_json = json[entity_list[translation_index].get(TranslationValues.value)]
+                    return self.parse_json(new_json, translations, group_counter, value_counter, col_entity)
+                else:
+                    return None
 
     def get_translations(self, table):
         translation_tables = self.get_translation_tables(table)

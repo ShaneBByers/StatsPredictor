@@ -88,6 +88,44 @@ class Players(Enum):
     position = 'POSITION'
 
 
+class PlayerStats(Enum):
+
+    @classmethod
+    def table_name(cls):
+        return 'PLAYER_STATS'
+
+    @classmethod
+    def auto_increments(cls):
+        return []
+
+    @classmethod
+    def not_nulls(cls):
+        return ['GAME_ID', 'TEAM_ID', 'PLAYER_ID']
+
+    game_id = 'GAME_ID'
+    team_id = 'TEAM_ID'
+    player_id = 'PLAYER_ID'
+    goals = 'GOALS'
+    assists = 'ASSISTS'
+    shots = 'SHOTS'
+    ppg = 'PPG'
+    ppa = 'PPA'
+    shg = 'SHG'
+    sha = 'SHA'
+    pim = 'PIM'
+    fot = 'FOT'
+    fow = 'FOW'
+    hits = 'HITS'
+    plus_minus = 'PLUS_MINUS'
+    blocked = 'BLOCKED'
+    takeaways = 'TAKEAWAYS'
+    giveaways = 'GIVEAWAYS'
+    toi_sec = 'TOI_SEC'
+    pp_toi_sec = 'PP_TOI_SEC'
+    sh_toi_sec = 'SH_TOI_SEC'
+    even_toi_sec = 'EVEN_TOI_SEC'
+
+
 class Seasons(Enum):
 
     @classmethod
@@ -246,6 +284,7 @@ DB_TABLES = {'CONFERENCES': Conferences,
              'DIVISIONS': Divisions,
              'GAMES': Games,
              'PLAYERS': Players,
+             'PLAYER_STATS': PlayerStats,
              'SEASONS': Seasons,
              'TEAMS': Teams,
              'TEAM_STATS': TeamStats,

@@ -51,6 +51,13 @@ class Modifier:
         self.logger.info("Modified " + height_string + " to " + str(height_int))
         return height_int
 
+    def toi_to_sec(self, toi_string):
+        minutes = toi_string.split(":")[0]
+        seconds = toi_string.split(":")[1]
+        seconds = int(seconds) + int(minutes) * 60
+        self.logger.info("Modified " + toi_string + " to " + str(seconds))
+        return seconds
+
     def immediate(self, val):
         if val == "True":
             self.logger.info("Parsed " + val + " as bool(True)")
@@ -69,4 +76,5 @@ class Modifier:
     modifiers = {'replace_string': replace_string,
                  'date_string_to_date': date_string_to_date,
                  'height_string_to_int': height_string_to_int,
-                 'datetime_string_to_datetime': datetime_string_to_datetime}
+                 'datetime_string_to_datetime': datetime_string_to_datetime,
+                 'toi_to_sec': toi_to_sec}
