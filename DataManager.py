@@ -73,17 +73,18 @@ class DataManager:
             insert_values.remove(remove_game)
         self.db_manager.insert(insert_values)
 
-    def insert_team_stats(self, current_season=True, season_id=None):
-        season_select = database.entity(Seasons)
-        if current_season:
-            season_select.add_where(Seasons.is_current, True)
-        elif season_id is not None:
-            season_select.add_where(Seasons.id, season_id)
-        season = self.db_manager.select_single(season_select)
-        games_select = database.entity(Games)
-        games_select.add_where(Games.season_id, season.get(Seasons.id))
-        games_select.add_where(Games.is_home, True)
-        games = self.db_manager.select_all(games_select)
+    def insert_team_stats(self, current_season=True, season_id=None, games=None):
+        if games is None:
+            season_select = database.entity(Seasons)
+            if current_season:
+                season_select.add_where(Seasons.is_current, True)
+            elif season_id is not None:
+                season_select.add_where(Seasons.id, season_id)
+            season = self.db_manager.select_single(season_select)
+            games_select = database.entity(Games)
+            games_select.add_where(Games.season_id, season.get(Seasons.id))
+            games_select.add_where(Games.is_home, True)
+            games = self.db_manager.select_all(games_select)
         insert_values = []
         translations_dict = self.get_translations(DB_TABLES["TEAM_STATS"])
         today = date.today()
@@ -96,17 +97,18 @@ class DataManager:
                                                          translations_dict=translations_dict))
         self.db_manager.insert(insert_values)
 
-    def insert_player_stats(self, current_season=True, season_id=None):
-        season_select = database.entity(Seasons)
-        if current_season:
-            season_select.add_where(Seasons.is_current, True)
-        elif season_id is not None:
-            season_select.add_where(Seasons.id, season_id)
-        season = self.db_manager.select_single(season_select)
-        games_select = database.entity(Games)
-        games_select.add_where(Games.season_id, season.get(Seasons.id))
-        games_select.add_where(Games.is_home, True)
-        games = self.db_manager.select_all(games_select)
+    def insert_player_stats(self, current_season=True, season_id=None, games=None):
+        if games is None:
+            season_select = database.entity(Seasons)
+            if current_season:
+                season_select.add_where(Seasons.is_current, True)
+            elif season_id is not None:
+                season_select.add_where(Seasons.id, season_id)
+            season = self.db_manager.select_single(season_select)
+            games_select = database.entity(Games)
+            games_select.add_where(Games.season_id, season.get(Seasons.id))
+            games_select.add_where(Games.is_home, True)
+            games = self.db_manager.select_all(games_select)
         insert_values = []
         translations_dict = self.get_translations(DB_TABLES["PLAYER_STATS"])
         today = date.today()
@@ -162,6 +164,28 @@ class DataManager:
                                season_id=season_id)
         self.insert_player_stats(current_season=False,
                                  season_id=season_id)
+
+    def current_day_functions(self):
+        team_stats_select = database.entity(TeamStats)
+        team_stats_select.add_order_by(TeamStats.game_id, False)
+        team_stats = self.db_manager.select_single(team_stats_select)
+        last_game_id = team_stats.get(TeamStats.game_id)
+        last_game_select = database.entity(Games)
+        last_game_select.add_where(Games.id, last_game_id)
+        last_game_select.add_where(Games.is_home, True)
+        last_game = self.db_manager.select_single(last_game_select)
+        last_date = last_game.get(Games.date_time).date()
+        season_select = database.entity(Seasons)
+        season_select.add_where(Seasons.is_current, True)
+        season = self.db_manager.select_single(season_select)
+        season_games_select = database.entity(Games)
+        season_games_select.add_where(Games.season_id, season.get(Seasons.id))
+        season_games = self.db_manager.select_all(season_games_select)
+        today = date.today()
+        games_filter = filter(lambda x: last_date < x.get(Games.date_time).date() < today, season_games)
+        selected_games = list(games_filter)
+        self.insert_team_stats(games=selected_games)
+        self.insert_player_stats(games=selected_games)
 
     def get_web_values(self, table_name, modify_args=None, additional_vals=None, translations_dict=None):
         return_values = []
