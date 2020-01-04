@@ -252,12 +252,13 @@ class TranslationTables(Enum):
 
     @classmethod
     def not_nulls(cls):
-        return ['REF_TABLE']
+        return ['REF_TABLE', 'IS_SINGLE']
 
     id = 'ID'
     ref_table = 'REF_TABLE'
     url_path = 'URL_PATH'
     modifier = 'MODIFIER'
+    is_single = 'IS_SINGLE'
 
 
 class TranslationValues(Enum):

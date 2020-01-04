@@ -1,5 +1,6 @@
 import logging
 import Constants
+from datetime import timedelta, date
 from database import database
 from WebManager import WebManager
 from Modifiers import Modifier
@@ -44,10 +45,12 @@ class DataManager:
         insert_values = self.get_web_values("SEASONS")
         self.db_manager.insert(insert_values)
 
-    def insert_games(self, current_season=True):
+    def insert_games(self, current_season=True, season_id=None):
         season_select = database.entity(Seasons)
         if current_season:
             season_select.add_where(Seasons.is_current, True)
+        elif season_id is not None:
+            season_select.add_where(Seasons.id, season_id)
         season = self.db_manager.select_single(season_select)
         start_date = self.modifier.date_to_date_string(season.get(Seasons.start_date))
         end_date = self.modifier.date_to_date_string(season.get(Seasons.end_date))
@@ -70,10 +73,12 @@ class DataManager:
             insert_values.remove(remove_game)
         self.db_manager.insert(insert_values)
 
-    def insert_team_stats(self, current_season=True):
+    def insert_team_stats(self, current_season=True, season_id=None):
         season_select = database.entity(Seasons)
         if current_season:
             season_select.add_where(Seasons.is_current, True)
+        elif season_id is not None:
+            season_select.add_where(Seasons.id, season_id)
         season = self.db_manager.select_single(season_select)
         games_select = database.entity(Games)
         games_select.add_where(Games.season_id, season.get(Seasons.id))
@@ -81,17 +86,22 @@ class DataManager:
         games = self.db_manager.select_all(games_select)
         insert_values = []
         translations_dict = self.get_translations(DB_TABLES["TEAM_STATS"])
+        today = date.today()
         for game in games:
-            insert_values.extend(self.get_web_values("TEAM_STATS",
-                                                     modify_args=(game.get(Games.id)),
-                                                     additional_vals=None,
-                                                     translations_dict=translations_dict))
+            game_date = game.get(Games.date_time).date()
+            if game_date < today:
+                insert_values.extend(self.get_web_values("TEAM_STATS",
+                                                         modify_args=(game.get(Games.id)),
+                                                         additional_vals=None,
+                                                         translations_dict=translations_dict))
         self.db_manager.insert(insert_values)
 
-    def insert_player_stats(self, current_season=True):
+    def insert_player_stats(self, current_season=True, season_id=None):
         season_select = database.entity(Seasons)
         if current_season:
             season_select.add_where(Seasons.is_current, True)
+        elif season_id is not None:
+            season_select.add_where(Seasons.id, season_id)
         season = self.db_manager.select_single(season_select)
         games_select = database.entity(Games)
         games_select.add_where(Games.season_id, season.get(Seasons.id))
@@ -99,12 +109,59 @@ class DataManager:
         games = self.db_manager.select_all(games_select)
         insert_values = []
         translations_dict = self.get_translations(DB_TABLES["PLAYER_STATS"])
+        today = date.today()
         for game in games:
-            insert_values.extend(self.get_web_values("PLAYER_STATS",
-                                                     modify_args=(game.get(Games.id)),
-                                                     additional_vals={"GAME_ID": game.get(Games.id)},
-                                                     translations_dict=translations_dict))
+            game_date = game.get(Games.date_time).date()
+            if game_date < today:
+                insert_values.extend(self.get_web_values("PLAYER_STATS",
+                                                         modify_args=(game.get(Games.id)),
+                                                         additional_vals={"GAME_ID": game.get(Games.id)},
+                                                         translations_dict=translations_dict))
+        current_players_select = database.entity(Players)
+        current_players = self.db_manager.select_all(current_players_select)
+        current_player_ids = list(map(lambda x: x.get(Players.id), current_players))
+        insert_new_player_ids = []
+        for insert_value in insert_values:
+            insert_value_id = insert_value.get(PlayerStats.player_id)
+            if insert_value_id not in current_player_ids and insert_value_id not in insert_new_player_ids:
+                insert_new_player_ids.append(insert_value_id)
+        if len(insert_new_player_ids) > 0:
+            insert_new_players = []
+            new_player_translation_dict = self.get_translations(DB_TABLES["PLAYERS"], True)
+            for insert_new_player_id in insert_new_player_ids:
+                insert_new_players.extend(self.get_web_values("PLAYERS",
+                                                              modify_args=insert_new_player_id,
+                                                              translations_dict=new_player_translation_dict))
+            self.db_manager.insert(insert_new_players, False)
         self.db_manager.insert(insert_values)
+
+    def update_game_times(self, season_id=None):
+        games_select = database.entity(Games)
+        games_select.add_where(Games.is_home, True)
+        if season_id is not None:
+            games_select.add_where(Games.season_id, season_id)
+        games = self.db_manager.select_all(games_select)
+        teams_select = database.entity(Teams)
+        teams = self.db_manager.select_all(teams_select)
+        teams_dict = {}
+        for team in teams:
+            teams_dict[team.get(Teams.id)] = team.get(Teams.timezone_offset)
+        for game in games:
+            game_start = game.get(Games.date_time)
+            offset = teams_dict[game.get(Games.team_id)]
+            game_start += timedelta(hours=offset)
+            game.set(Games.date_time, game_start)
+            game.add_where(Games.id, game.get(Games.id))
+        self.db_manager.update(games)
+
+    def full_season(self, season_id):
+        self.insert_games(current_season=False,
+                          season_id=season_id)
+        self.update_game_times(season_id=season_id)
+        self.insert_team_stats(current_season=False,
+                               season_id=season_id)
+        self.insert_player_stats(current_season=False,
+                                 season_id=season_id)
 
     def get_web_values(self, table_name, modify_args=None, additional_vals=None, translations_dict=None):
         return_values = []
@@ -208,8 +265,8 @@ class DataManager:
                 else:
                     return None
 
-    def get_translations(self, table):
-        translation_tables = self.get_translation_tables(table)
+    def get_translations(self, table, is_single=False):
+        translation_tables = self.get_translation_tables(table, is_single)
         return_translations = {}
         for translation_table in translation_tables:
             translation_columns = self.get_translation_columns(translation_table.get(TranslationTables.id))
@@ -228,9 +285,10 @@ class DataManager:
 
         return return_translations
 
-    def get_translation_tables(self, table):
+    def get_translation_tables(self, table, is_single=False):
         translation_table_select = database.entity(TranslationTables)
         translation_table_select.add_where(TranslationTables.ref_table, table.table_name())
+        translation_table_select.add_where(TranslationTables.is_single, is_single)
         return self.db_manager.select_all(translation_table_select)
 
     def get_translation_columns(self, table_id):
