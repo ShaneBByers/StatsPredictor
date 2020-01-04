@@ -180,6 +180,7 @@ class DataManager:
         season = self.db_manager.select_single(season_select)
         season_games_select = database.entity(Games)
         season_games_select.add_where(Games.season_id, season.get(Seasons.id))
+        season_games_select.add_where(Games.is_home, True)
         season_games = self.db_manager.select_all(season_games_select)
         today = date.today()
         games_filter = filter(lambda x: last_date < x.get(Games.date_time).date() < today, season_games)
