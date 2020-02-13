@@ -42,6 +42,83 @@ class Divisions(Enum):
     abbreviation = 'ABBREVIATION'
 
 
+class FdGames(Enum):
+
+    @classmethod
+    def table_name(cls):
+        return 'FD_GAMES'
+
+    @classmethod
+    def auto_increments(cls):
+        return []
+
+    @classmethod
+    def not_nulls(cls):
+        return ['ID', 'SLATE_ID', 'HOME_ID', 'AWAY_ID']
+
+    id = 'ID'
+    slate_id = 'SLATE_ID'
+    home_id = 'HOME_ID'
+    away_id = 'AWAY_ID'
+    nhl_game_id = 'NHL_GAME_ID'
+
+
+class FdPlayers(Enum):
+
+    @classmethod
+    def table_name(cls):
+        return 'FD_PLAYERS'
+
+    @classmethod
+    def auto_increments(cls):
+        return []
+
+    @classmethod
+    def not_nulls(cls):
+        return ['ID', 'FULL_NAME']
+
+    id = 'ID'
+    full_name = 'FULL_NAME'
+    nhl_id = 'NHL_ID'
+
+
+class FdSlates(Enum):
+
+    @classmethod
+    def table_name(cls):
+        return 'FD_SLATES'
+
+    @classmethod
+    def auto_increments(cls):
+        return []
+
+    @classmethod
+    def not_nulls(cls):
+        return ['ID', 'DATE']
+
+    id = 'ID'
+    date = 'DATE'
+
+
+class FdTeams(Enum):
+
+    @classmethod
+    def table_name(cls):
+        return 'FD_TEAMS'
+
+    @classmethod
+    def auto_increments(cls):
+        return ['ID']
+
+    @classmethod
+    def not_nulls(cls):
+        return ['ABBREVIATION', 'NHL_ID']
+
+    id = 'ID'
+    abbreviation = 'ABBREVIATION'
+    nhl_id = 'NHL_ID'
+
+
 class Games(Enum):
 
     @classmethod
@@ -283,6 +360,10 @@ class TranslationValues(Enum):
 
 DB_TABLES = {'CONFERENCES': Conferences,
              'DIVISIONS': Divisions,
+             'FD_GAMES': FdGames,
+             'FD_PLAYERS': FdPlayers,
+             'FD_SLATES': FdSlates,
+             'FD_TEAMS': FdTeams,
              'GAMES': Games,
              'PLAYERS': Players,
              'PLAYER_STATS': PlayerStats,
