@@ -82,6 +82,28 @@ class FdPlayers(Enum):
     nhl_id = 'NHL_ID'
 
 
+class FdPlayerStats(Enum):
+
+    @classmethod
+    def table_name(cls):
+        return 'FD_PLAYER_STATS'
+
+    @classmethod
+    def auto_increments(cls):
+        return []
+
+    @classmethod
+    def not_nulls(cls):
+        return ['PLAYER_ID', 'GAME_ID', 'POSITION', 'SALARY']
+
+    player_id = 'PLAYER_ID'
+    game_id = 'GAME_ID'
+    position = 'POSITION'
+    line = 'LINE'
+    pp_line = 'PP_LINE'
+    salary = 'SALARY'
+
+
 class FdSlates(Enum):
 
     @classmethod
@@ -362,6 +384,7 @@ DB_TABLES = {'CONFERENCES': Conferences,
              'DIVISIONS': Divisions,
              'FD_GAMES': FdGames,
              'FD_PLAYERS': FdPlayers,
+             'FD_PLAYER_STATS': FdPlayerStats,
              'FD_SLATES': FdSlates,
              'FD_TEAMS': FdTeams,
              'GAMES': Games,
