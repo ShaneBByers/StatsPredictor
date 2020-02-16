@@ -8,17 +8,16 @@ from Generated.DatabaseClasses import *
 
 class DataManagerFD:
 
-    def __init__(self, logger_name):
+    def __init__(self, logger_name, db_manager):
         self.logger = logging.getLogger(logger_name)
 
-        self.db_manager = database.connect(logger_name,
-                                           Constants.DB_HOST,
-                                           Constants.DB_USERNAME,
-                                           Constants.DB_PASSWORD,
-                                           Constants.DB_NAME)
+        self.db_manager = db_manager
 
         self.web_soup_manager = WebSoupManager(logger_name,
                                                Constants.ROTOGRINDERS_URL)
+
+    def current_day_functions(self):
+        return
 
     def get_soup_data(self):
         soup = self.web_soup_manager.get_soup()
@@ -60,7 +59,9 @@ class DataManagerFD:
                 fd_game_insert.set(FdGames.away_id, fd_away_team.get(FdTeams.id))
                 fd_game_insert.set(FdGames.nhl_game_id, nhl_game_id)
                 self.db_manager.insert(fd_game_insert)
-                game = {'GAME_SOUP': li, 'HOME_ID': fd_home_team.get(FdTeams.id), 'AWAY_ID': fd_away_team.get(FdTeams.id)}
+                game = {'GAME_SOUP': li,
+                        'HOME_ID': fd_home_team.get(FdTeams.id),
+                        'AWAY_ID': fd_away_team.get(FdTeams.id)}
                 game_soups_dict[fd_game_id] = game
         return game_soups_dict
 

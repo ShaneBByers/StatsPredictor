@@ -1,5 +1,4 @@
 import logging
-import Constants
 from database import database
 from pulp import LpProblem, LpAffineExpression, LpVariable, LpStatus, LpMaximize
 from Generated.DatabaseClasses import *
@@ -7,14 +6,13 @@ from Generated.DatabaseClasses import *
 
 class DataManagerLP:
 
-    def __init__(self, logger_name):
+    def __init__(self, logger_name, db_manager):
         self.logger = logging.getLogger(logger_name)
 
-        self.db_manager = database.connect(logger_name,
-                                           Constants.DB_HOST,
-                                           Constants.DB_USERNAME,
-                                           Constants.DB_PASSWORD,
-                                           Constants.DB_NAME)
+        self.db_manager = db_manager
+
+    def current_day_functions(self):
+        return
 
     def calc_lineup(self):
         select_fd_player_stats = database.entity(FdPlayerStats)
@@ -86,7 +84,10 @@ class DataManagerLP:
                 select_fd_player_stats = database.entity(FdPlayerStats)
                 select_fd_player_stats.add_where(FdPlayerStats.player_id, fd_player.get(FdPlayers.id))
                 fd_player_stats = self.db_manager.select_single(select_fd_player_stats)
-                print(fd_player_stats.get(FdPlayerStats.position) + ": " + name + ": $" + str(fd_player_stats.get(FdPlayerStats.salary)))
+                print(fd_player_stats.get(FdPlayerStats.position) +
+                      ": " +
+                      name +
+                      ": $" + str(fd_player_stats.get(FdPlayerStats.salary)))
                 total_salary += fd_player_stats.get(FdPlayerStats.salary)
 
         print("Total salary: " + str(total_salary))

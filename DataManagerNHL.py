@@ -8,20 +8,39 @@ from Generated.DatabaseClasses import *
 
 
 class DataManagerNHL:
-    def __init__(self, logger_name):
+    def __init__(self, logger_name, db_manager):
         self.logger = logging.getLogger(logger_name)
 
-        self.db_manager = database.connect(logger_name,
-                                           Constants.DB_HOST,
-                                           Constants.DB_USERNAME,
-                                           Constants.DB_PASSWORD,
-                                           Constants.DB_NAME)
+        self.db_manager = db_manager
 
         self.web_manager = WebManager(logger_name,
                                       Constants.WEB_BASE_URL)
 
         self.modifier = Modifier(logger_name,
                                  self.db_manager)
+
+    def current_day_functions(self):
+        team_stats_select = database.entity(TeamStats)
+        team_stats_select.add_order_by(TeamStats.game_id, False)
+        team_stats = self.db_manager.select_single(team_stats_select)
+        last_game_id = team_stats.get(TeamStats.game_id)
+        last_game_select = database.entity(Games)
+        last_game_select.add_where(Games.id, last_game_id)
+        last_game_select.add_where(Games.is_home, True)
+        last_game = self.db_manager.select_single(last_game_select)
+        last_date = last_game.get(Games.date_time).date()
+        season_select = database.entity(Seasons)
+        season_select.add_where(Seasons.is_current, True)
+        season = self.db_manager.select_single(season_select)
+        season_games_select = database.entity(Games)
+        season_games_select.add_where(Games.season_id, season.get(Seasons.id))
+        season_games_select.add_where(Games.is_home, True)
+        season_games = self.db_manager.select_all(season_games_select)
+        today = date.today()
+        games_filter = filter(lambda x: last_date < x.get(Games.date_time).date() < today, season_games)
+        selected_games = list(games_filter)
+        self.insert_team_stats(games=selected_games)
+        self.insert_player_stats(games=selected_games)
 
     def insert_teams(self):
         insert_values = self.get_web_values("TEAMS")
@@ -155,29 +174,6 @@ class DataManagerNHL:
         self.insert_player_stats(current_season=False,
                                  season_id=season_id)
 
-    def current_day_functions(self):
-        team_stats_select = database.entity(TeamStats)
-        team_stats_select.add_order_by(TeamStats.game_id, False)
-        team_stats = self.db_manager.select_single(team_stats_select)
-        last_game_id = team_stats.get(TeamStats.game_id)
-        last_game_select = database.entity(Games)
-        last_game_select.add_where(Games.id, last_game_id)
-        last_game_select.add_where(Games.is_home, True)
-        last_game = self.db_manager.select_single(last_game_select)
-        last_date = last_game.get(Games.date_time).date()
-        season_select = database.entity(Seasons)
-        season_select.add_where(Seasons.is_current, True)
-        season = self.db_manager.select_single(season_select)
-        season_games_select = database.entity(Games)
-        season_games_select.add_where(Games.season_id, season.get(Seasons.id))
-        season_games_select.add_where(Games.is_home, True)
-        season_games = self.db_manager.select_all(season_games_select)
-        today = date.today()
-        games_filter = filter(lambda x: last_date < x.get(Games.date_time).date() < today, season_games)
-        selected_games = list(games_filter)
-        self.insert_team_stats(games=selected_games)
-        self.insert_player_stats(games=selected_games)
-
     def get_web_values(self, table_name, modify_args=None, additional_vals=None, translations_dict=None):
         return_values = []
         if translations_dict is None:
@@ -187,7 +183,8 @@ class DataManagerNHL:
                 json = self.web_manager.get(translation_table.get(TranslationTables.url_path))
             else:
                 new_get = translation_table.get(TranslationTables.url_path)
-                new_get = self.modifier.modify(translation_table.get(TranslationTables.modifier), (new_get, modify_args))
+                modifier = translation_table.get(TranslationTables.modifier)
+                new_get = self.modifier.modify(modifier, (new_get, modify_args))
                 json = self.web_manager.get(new_get)
             all_groups_web_values = []
             for group_id, translations_tuple in translations.items():

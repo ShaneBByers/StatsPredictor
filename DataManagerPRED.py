@@ -1,5 +1,4 @@
 import logging
-import Constants
 from datetime import date
 from database import database
 from Generated.DatabaseClasses import *
@@ -7,14 +6,13 @@ from Generated.DatabaseClasses import *
 
 class DataManagerPRED:
 
-    def __init__(self, logger_name):
+    def __init__(self, logger_name, db_manager):
         self.logger = logging.getLogger(logger_name)
 
-        self.db_manager = database.connect(logger_name,
-                                           Constants.DB_HOST,
-                                           Constants.DB_USERNAME,
-                                           Constants.DB_PASSWORD,
-                                           Constants.DB_NAME)
+        self.db_manager = db_manager
+
+    def current_day_functions(self):
+        return
 
     def get_pred_player_stats(self):
         select_season = database.entity(Seasons)

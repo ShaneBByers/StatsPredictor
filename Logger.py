@@ -14,9 +14,16 @@ def setup(logger_name):
     f_handler.setLevel(logging.NOTSET)
 
     c_format = logging.Formatter(
-        '%(message)s - FILE: %(filename)s - FUNC: %(funcName)s - LINE: %(lineno)d')
+        '%(message)s - ' +
+        'FILE: %(filename)s - ' +
+        'FUNC: %(funcName)s - ' +
+        'LINE: %(lineno)d')
     f_format = logging.Formatter(
-        '%(asctime)s - MESSAGE: %(message)s - %(levelname)s - FILE: %(filename)s - FUNC: %(funcName)s - LINE: %(lineno)d')
+        '%(asctime)s - ' +
+        'MESSAGE: %(message)s - %(levelname)s - ' +
+        'FILE: %(filename)s - ' +
+        'FUNC: %(funcName)s - ' +
+        'LINE: %(lineno)d')
 
     c_handler.setFormatter(c_format)
     f_handler.setFormatter(f_format)
