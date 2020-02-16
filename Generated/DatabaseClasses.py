@@ -94,14 +94,33 @@ class FdPlayerStats(Enum):
 
     @classmethod
     def not_nulls(cls):
-        return ['PLAYER_ID', 'GAME_ID', 'POSITION', 'SALARY']
+        return ['GAME_ID', 'TEAM_ID', 'PLAYER_ID', 'POSITION', 'SALARY']
 
-    player_id = 'PLAYER_ID'
     game_id = 'GAME_ID'
+    team_id = 'TEAM_ID'
+    player_id = 'PLAYER_ID'
     position = 'POSITION'
     line = 'LINE'
     pp_line = 'PP_LINE'
     salary = 'SALARY'
+
+
+class FdScoring(Enum):
+
+    @classmethod
+    def table_name(cls):
+        return 'FD_SCORING'
+
+    @classmethod
+    def auto_increments(cls):
+        return []
+
+    @classmethod
+    def not_nulls(cls):
+        return ['TYPE', 'POINTS']
+
+    type = 'TYPE'
+    points = 'POINTS'
 
 
 class FdSlates(Enum):
@@ -185,6 +204,34 @@ class Players(Enum):
     weight = 'WEIGHT'
     shoots = 'SHOOTS'
     position = 'POSITION'
+
+
+class PlayerPredStats(Enum):
+
+    @classmethod
+    def table_name(cls):
+        return 'PLAYER_PRED_STATS'
+
+    @classmethod
+    def auto_increments(cls):
+        return []
+
+    @classmethod
+    def not_nulls(cls):
+        return ['GAME_ID', 'TEAM_ID', 'PLAYER_ID']
+
+    game_id = 'GAME_ID'
+    team_id = 'TEAM_ID'
+    player_id = 'PLAYER_ID'
+    goals = 'GOALS'
+    assists = 'ASSISTS'
+    shots = 'SHOTS'
+    ppg = 'PPG'
+    ppa = 'PPA'
+    shg = 'SHG'
+    sha = 'SHA'
+    blocked = 'BLOCKED'
+    fd_score = 'FD_SCORE'
 
 
 class PlayerStats(Enum):
@@ -385,10 +432,12 @@ DB_TABLES = {'CONFERENCES': Conferences,
              'FD_GAMES': FdGames,
              'FD_PLAYERS': FdPlayers,
              'FD_PLAYER_STATS': FdPlayerStats,
+             'FD_SCORING': FdScoring,
              'FD_SLATES': FdSlates,
              'FD_TEAMS': FdTeams,
              'GAMES': Games,
              'PLAYERS': Players,
+             'PLAYER_PRED_STATS': PlayerPredStats,
              'PLAYER_STATS': PlayerStats,
              'SEASONS': Seasons,
              'TEAMS': Teams,
