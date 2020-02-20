@@ -17,9 +17,6 @@ class DataManagerFD:
                                                Constants.ROTOGRINDERS_URL)
 
     def current_day_functions(self):
-        return
-
-    def get_soup_data(self):
         soup = self.web_soup_manager.get_soup()
 
         slate_id = self.get_soup_slate(soup)
@@ -102,6 +99,21 @@ class DataManagerFD:
             self.get_soup_player_stats_for_team(away_team, game['AWAY_ID'], game_id)
 
     def get_soup_player_stats_for_team(self, team, fd_team_id, game_id):
+        pitcher_player = team.find('div', 'pitcher players')
+        goalie = pitcher_player.find('a')
+        fd_player_id = self.get_fd_player_id(goalie)
+        salary = pitcher_player.find('span', 'meta stats').find('span', 'salary').string
+        if "$" in salary and "K" in salary:
+            salary = int(float(salary.split("$")[1].split("K")[0]) * 1000)
+            insert_fd_player_stats = database.entity(FdPlayerStats)
+            insert_fd_player_stats.set(FdPlayerStats.player_id, fd_player_id)
+            insert_fd_player_stats.set(FdPlayerStats.game_id, game_id)
+            insert_fd_player_stats.set(FdPlayerStats.team_id, fd_team_id)
+            insert_fd_player_stats.set(FdPlayerStats.position, "G")
+            insert_fd_player_stats.set(FdPlayerStats.line, None)
+            insert_fd_player_stats.set(FdPlayerStats.pp_line, None)
+            insert_fd_player_stats.set(FdPlayerStats.salary, salary)
+            self.db_manager.insert(insert_fd_player_stats)
         lines = team.find_all('div', 'blk nhl')
         def_line = 0
         for line in lines:
@@ -140,12 +152,16 @@ class DataManagerFD:
                         self.db_manager.insert(insert_fd_player_stats)
 
     def get_fd_player_id(self, player):
-        fd_player_id = int(player['href'][-5:])
+        last_hyphen = player['href'].rfind('-')
+        fd_player_id = int(player['href'][last_hyphen + 1:])
         fd_player_select = database.entity(FdPlayers)
         fd_player_select.add_where(FdPlayers.id, fd_player_id)
         fd_player = self.db_manager.select_single(fd_player_select)
         if fd_player is None:
-            player_name = player['title']
+            if 'title' in player.attrs:
+                player_name = player['title']
+            else:
+                player_name = player.string
             nhl_player_select = database.entity(Players)
             nhl_player_select.add_where(Players.full_name, player_name)
             nhl_player = self.db_manager.select_all(nhl_player_select)
