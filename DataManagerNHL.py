@@ -40,7 +40,10 @@ class DataManagerNHL:
         games_filter = filter(lambda x: last_date < x.get(Games.date_time).date() < today, season_games)
         selected_games = list(games_filter)
         self.insert_team_stats(games=selected_games)
-        self.insert_player_stats(games=selected_games)
+        self.insert_player_stats(games=selected_games,
+                                 is_goalie=False)
+        self.insert_player_stats(games=selected_games,
+                                 is_goalie=True)
 
     def insert_teams(self):
         insert_values = self.get_web_values("TEAMS")
@@ -106,7 +109,7 @@ class DataManagerNHL:
                                                          translations_dict=translations_dict))
         self.db_manager.insert(insert_values)
 
-    def insert_player_stats(self, current_season=True, season_id=None, games=None):
+    def insert_player_stats(self, current_season=True, season_id=None, games=None, is_goalie=False):
         if games is None:
             season_select = database.entity(Seasons)
             if current_season:
@@ -119,15 +122,24 @@ class DataManagerNHL:
             games_select.add_where(Games.is_home, True)
             games = self.db_manager.select_all(games_select)
         insert_values = []
-        translations_dict = self.get_translations(DB_TABLES["PLAYER_STATS"])
+        if is_goalie:
+            translations_dict = self.get_translations(DB_TABLES["GOALIE_STATS"])
+        else:
+            translations_dict = self.get_translations(DB_TABLES["PLAYER_STATS"])
         today = date.today()
         for game in games:
             game_date = game.get(Games.date_time).date()
             if game_date < today:
-                insert_values.extend(self.get_web_values("PLAYER_STATS",
-                                                         modify_args=(game.get(Games.id)),
-                                                         additional_vals={"GAME_ID": game.get(Games.id)},
-                                                         translations_dict=translations_dict))
+                if is_goalie:
+                    insert_values.extend(self.get_web_values("GOALIE_STATS",
+                                                             modify_args=(game.get(Games.id)),
+                                                             additional_vals={"GAME_ID": game.get(Games.id)},
+                                                             translations_dict=translations_dict))
+                else:
+                    insert_values.extend(self.get_web_values("PLAYER_STATS",
+                                                             modify_args=(game.get(Games.id)),
+                                                             additional_vals={"GAME_ID": game.get(Games.id)},
+                                                             translations_dict=translations_dict))
         current_players_select = database.entity(Players)
         current_players = self.db_manager.select_all(current_players_select)
         current_player_ids = list(map(lambda x: x.get(Players.id), current_players))
@@ -173,6 +185,9 @@ class DataManagerNHL:
                                season_id=season_id)
         self.insert_player_stats(current_season=False,
                                  season_id=season_id)
+        self.insert_player_stats(current_season=False,
+                                 season_id=season_id,
+                                 is_goalie=True)
 
     def get_web_values(self, table_name, modify_args=None, additional_vals=None, translations_dict=None):
         return_values = []

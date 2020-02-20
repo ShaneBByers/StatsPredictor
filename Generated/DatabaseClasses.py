@@ -181,6 +181,35 @@ class Games(Enum):
     date_time = 'DATE_TIME'
 
 
+class GoalieStats(Enum):
+
+    @classmethod
+    def table_name(cls):
+        return 'GOALIE_STATS'
+
+    @classmethod
+    def auto_increments(cls):
+        return []
+
+    @classmethod
+    def not_nulls(cls):
+        return ['GAME_ID', 'TEAM_ID', 'PLAYER_ID']
+
+    game_id = 'GAME_ID'
+    team_id = 'TEAM_ID'
+    player_id = 'PLAYER_ID'
+    toi_sec = 'TOI_SEC'
+    total_shots = 'TOTAL_SHOTS'
+    even_shots = 'EVEN_SHOTS'
+    pp_shots = 'PP_SHOTS'
+    sh_shots = 'SH_SHOTS'
+    total_saves = 'TOTAL_SAVES'
+    even_saves = 'EVEN_SAVES'
+    pp_saves = 'PP_SAVES'
+    sh_saves = 'SH_SAVES'
+    decision = 'DECISION'
+
+
 class Players(Enum):
 
     @classmethod
@@ -436,6 +465,7 @@ DB_TABLES = {'CONFERENCES': Conferences,
              'FD_SLATES': FdSlates,
              'FD_TEAMS': FdTeams,
              'GAMES': Games,
+             'GOALIE_STATS': GoalieStats,
              'PLAYERS': Players,
              'PLAYER_PRED_STATS': PlayerPredStats,
              'PLAYER_STATS': PlayerStats,
