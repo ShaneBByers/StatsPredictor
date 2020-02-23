@@ -10,4 +10,7 @@ manager = DataManager(logger_name)
 # manager.manager_nhl.insert_player_stats(current_season=False,
 #                                         season_id=20192020,
 #                                         is_goalie=True)
-manager.manager_fd.current_day_functions()
+# manager.manager_nhl.current_day_functions()
+# manager.manager_pred.test()
+# manager.manager_fd.current_day_functions()
+manager.manager_lp.calc_lineup()

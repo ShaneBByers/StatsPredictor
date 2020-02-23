@@ -39,10 +39,15 @@ class DataManagerFD:
 
         game_soups_dict = {}
         for li in li_list:
-            pitcher_players = li.find('div', 'pitcher players')
-            pitcher_input = pitcher_players.find('input')
-            pitcher_val = pitcher_input['value']
-            if '"slate_id":"' + str(slate_id) + '"' in pitcher_val:
+            in_slate = False
+            pitcher_players_list = li.find_all('div', 'pitcher players')
+            for pitcher_players in pitcher_players_list:
+                pitcher_input = pitcher_players.find('input')
+                pitcher_val = pitcher_input['value']
+                if '"slate_id":"' + str(slate_id) + '"' in pitcher_val:
+                    in_slate = True
+                    break
+            if in_slate:
                 home_team_abbr = li['data-home']
                 fd_home_team = self.get_fd_team_id(home_team_abbr)
                 away_team_abbr = li['data-away']

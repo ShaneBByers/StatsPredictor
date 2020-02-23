@@ -121,6 +121,7 @@ class FdScoring(Enum):
 
     type = 'TYPE'
     points = 'POINTS'
+    is_goalie = 'IS_GOALIE'
 
 
 class FdSlates(Enum):
@@ -179,6 +180,30 @@ class Games(Enum):
     season_id = 'SEASON_ID'
     is_home = 'IS_HOME'
     date_time = 'DATE_TIME'
+
+
+class GoaliePredStats(Enum):
+
+    @classmethod
+    def table_name(cls):
+        return 'GOALIE_PRED_STATS'
+
+    @classmethod
+    def auto_increments(cls):
+        return []
+
+    @classmethod
+    def not_nulls(cls):
+        return ['GAME_ID', 'TEAM_ID', 'PLAYER_ID']
+
+    game_id = 'GAME_ID'
+    team_id = 'TEAM_ID'
+    player_id = 'PLAYER_ID'
+    saves = 'SAVES'
+    ga = 'GA'
+    is_win = 'IS_WIN'
+    is_shutout = 'IS_SHUTOUT'
+    fd_score = 'FD_SCORE'
 
 
 class GoalieStats(Enum):
@@ -465,6 +490,7 @@ DB_TABLES = {'CONFERENCES': Conferences,
              'FD_SLATES': FdSlates,
              'FD_TEAMS': FdTeams,
              'GAMES': Games,
+             'GOALIE_PRED_STATS': GoaliePredStats,
              'GOALIE_STATS': GoalieStats,
              'PLAYERS': Players,
              'PLAYER_PRED_STATS': PlayerPredStats,

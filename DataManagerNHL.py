@@ -23,12 +23,15 @@ class DataManagerNHL:
         team_stats_select = database.entity(TeamStats)
         team_stats_select.add_order_by(TeamStats.game_id, False)
         team_stats = self.db_manager.select_single(team_stats_select)
-        last_game_id = team_stats.get(TeamStats.game_id)
-        last_game_select = database.entity(Games)
-        last_game_select.add_where(Games.id, last_game_id)
-        last_game_select.add_where(Games.is_home, True)
-        last_game = self.db_manager.select_single(last_game_select)
-        last_date = last_game.get(Games.date_time).date()
+        if team_stats is not None:
+            last_game_id = team_stats.get(TeamStats.game_id)
+            last_game_select = database.entity(Games)
+            last_game_select.add_where(Games.id, last_game_id)
+            last_game_select.add_where(Games.is_home, True)
+            last_game = self.db_manager.select_single(last_game_select)
+            last_date = last_game.get(Games.date_time).date()
+        else:
+            last_date = date.min
         season_select = database.entity(Seasons)
         season_select.add_where(Seasons.is_current, True)
         season = self.db_manager.select_single(season_select)
