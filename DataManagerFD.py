@@ -20,18 +20,26 @@ class DataManagerFD:
         soup = self.web_soup_manager.get_soup()
 
         slate_id = self.get_soup_slate(soup)
-        games_dict = self.get_soup_games(soup, slate_id)
-        self.get_soup_player_stats(games_dict)
+        if slate_id is not None:
+            games_dict = self.get_soup_games(soup, slate_id)
+            self.get_soup_player_stats(games_dict)
+        self.db_manager.commit()
 
     def get_soup_slate(self, soup):
         div = soup.find('div', id='gamestat-filters')
         scr = div.find('script').string
         slate_id = scr.split('Main":{"importId":"')[1].split('"')[0]
-        slate = database.entity(FdSlates)
-        slate.set(FdSlates.id, slate_id)
-        slate.set(FdSlates.date, date.today())
-        self.db_manager.insert(slate)
-        return slate_id
+        select_slate = database.entity(FdSlates)
+        select_slate.add_where(FdSlates.id, slate_id)
+        slate = self.db_manager.select_single(select_slate)
+        if slate is None:
+            insert_slate = database.entity(FdSlates)
+            insert_slate.set(FdSlates.id, slate_id)
+            insert_slate.set(FdSlates.date, date.today())
+            self.db_manager.insert(insert_slate, commit=False)
+            return slate_id
+        else:
+            return None
 
     def get_soup_games(self, soup, slate_id):
         ul = soup.find('ul', 'lst lineup')
@@ -60,7 +68,7 @@ class DataManagerFD:
                 fd_game_insert.set(FdGames.home_id, fd_home_team.get(FdTeams.id))
                 fd_game_insert.set(FdGames.away_id, fd_away_team.get(FdTeams.id))
                 fd_game_insert.set(FdGames.nhl_game_id, nhl_game_id)
-                self.db_manager.insert(fd_game_insert)
+                self.db_manager.insert(fd_game_insert, commit=False)
                 game = {'GAME_SOUP': li,
                         'HOME_ID': fd_home_team.get(FdTeams.id),
                         'AWAY_ID': fd_away_team.get(FdTeams.id)}
@@ -78,7 +86,7 @@ class DataManagerFD:
             nhl_teams_select.add_where(Teams.abbreviation, team_abbr)
             nhl_team = self.db_manager.select_single(nhl_teams_select)
             fd_team_insert.set(FdTeams.nhl_id, nhl_team.get(Teams.id))
-            self.db_manager.insert(fd_team_insert)
+            self.db_manager.insert(fd_team_insert, commit=False)
             fd_team = self.db_manager.select_single(fd_team_select)
         return fd_team
 
@@ -118,7 +126,7 @@ class DataManagerFD:
             insert_fd_player_stats.set(FdPlayerStats.line, None)
             insert_fd_player_stats.set(FdPlayerStats.pp_line, None)
             insert_fd_player_stats.set(FdPlayerStats.salary, salary)
-            self.db_manager.insert(insert_fd_player_stats)
+            self.db_manager.insert(insert_fd_player_stats, commit=False)
         lines = team.find_all('div', 'blk nhl')
         def_line = 0
         for line in lines:
@@ -154,7 +162,7 @@ class DataManagerFD:
                         insert_fd_player_stats.set(FdPlayerStats.line, line_number)
                         insert_fd_player_stats.set(FdPlayerStats.pp_line, pp_line)
                         insert_fd_player_stats.set(FdPlayerStats.salary, salary)
-                        self.db_manager.insert(insert_fd_player_stats)
+                        self.db_manager.insert(insert_fd_player_stats, commit=False)
 
     def get_fd_player_id(self, player):
         last_hyphen = player['href'].rfind('-')
@@ -177,6 +185,6 @@ class DataManagerFD:
                 insert_fd_player.set(FdPlayers.nhl_id, None)
             else:
                 insert_fd_player.set(FdPlayers.nhl_id, nhl_player[0].get(Players.id))
-            self.db_manager.insert(insert_fd_player)
+            self.db_manager.insert(insert_fd_player, commit=False)
             fd_player = self.db_manager.select_single(fd_player_select)
         return fd_player.get(FdPlayers.id)

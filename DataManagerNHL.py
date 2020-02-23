@@ -42,11 +42,13 @@ class DataManagerNHL:
         today = date.today()
         games_filter = filter(lambda x: last_date < x.get(Games.date_time).date() < today, season_games)
         selected_games = list(games_filter)
-        self.insert_team_stats(games=selected_games)
-        self.insert_player_stats(games=selected_games,
-                                 is_goalie=False)
-        self.insert_player_stats(games=selected_games,
-                                 is_goalie=True)
+        if len(selected_games) > 0:
+            self.insert_team_stats(games=selected_games)
+            self.insert_player_stats(games=selected_games,
+                                     is_goalie=False)
+            self.insert_player_stats(games=selected_games,
+                                     is_goalie=True)
+        self.db_manager.commit()
 
     def insert_teams(self):
         insert_values = self.get_web_values("TEAMS")
@@ -110,7 +112,7 @@ class DataManagerNHL:
                                                          modify_args=(game.get(Games.id)),
                                                          additional_vals=None,
                                                          translations_dict=translations_dict))
-        self.db_manager.insert(insert_values)
+        self.db_manager.insert(insert_values, commit=False)
 
     def insert_player_stats(self, current_season=True, season_id=None, games=None, is_goalie=False):
         if games is None:
@@ -158,8 +160,8 @@ class DataManagerNHL:
                 insert_new_players.extend(self.get_web_values("PLAYERS",
                                                               modify_args=insert_new_player_id,
                                                               translations_dict=new_player_translation_dict))
-            self.db_manager.insert(insert_new_players, False)
-        self.db_manager.insert(insert_values)
+            self.db_manager.insert(insert_new_players, commit=False)
+        self.db_manager.insert(insert_values, commit=False)
 
     def update_game_times(self, season_id=None):
         games_select = database.entity(Games)

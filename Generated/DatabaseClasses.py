@@ -235,6 +235,50 @@ class GoalieStats(Enum):
     decision = 'DECISION'
 
 
+class LpLineup(Enum):
+
+    @classmethod
+    def table_name(cls):
+        return 'LP_LINEUP'
+
+    @classmethod
+    def auto_increments(cls):
+        return ['ID']
+
+    @classmethod
+    def not_nulls(cls):
+        return []
+
+    id = 'ID'
+    slate_id = 'SLATE_ID'
+    result = 'RESULT'
+    total_points = 'TOTAL_POINTS'
+    date_time = 'DATE_TIME'
+    is_actual = 'IS_ACTUAL'
+    total_salary = 'TOTAL_SALARY'
+
+
+class LpPlayers(Enum):
+
+    @classmethod
+    def table_name(cls):
+        return 'LP_PLAYERS'
+
+    @classmethod
+    def auto_increments(cls):
+        return []
+
+    @classmethod
+    def not_nulls(cls):
+        return ['LINEUP_ID', 'NHL_ID']
+
+    lineup_id = 'LINEUP_ID'
+    nhl_id = 'NHL_ID'
+    position = 'POSITION'
+    salary = 'SALARY'
+    fd_score = 'FD_SCORE'
+
+
 class Players(Enum):
 
     @classmethod
@@ -247,7 +291,7 @@ class Players(Enum):
 
     @classmethod
     def not_nulls(cls):
-        return ['ID', 'FULL_NAME', 'FIRST_NAME', 'LAST_NAME', 'BIRTH_DATE', 'HEIGHT', 'WEIGHT', 'SHOOTS', 'POSITION']
+        return ['ID', 'FULL_NAME', 'FIRST_NAME', 'LAST_NAME', 'BIRTH_DATE', 'HEIGHT', 'WEIGHT', 'POSITION']
 
     id = 'ID'
     full_name = 'FULL_NAME'
@@ -492,6 +536,8 @@ DB_TABLES = {'CONFERENCES': Conferences,
              'GAMES': Games,
              'GOALIE_PRED_STATS': GoaliePredStats,
              'GOALIE_STATS': GoalieStats,
+             'LP_LINEUP': LpLineup,
+             'LP_PLAYERS': LpPlayers,
              'PLAYERS': Players,
              'PLAYER_PRED_STATS': PlayerPredStats,
              'PLAYER_STATS': PlayerStats,

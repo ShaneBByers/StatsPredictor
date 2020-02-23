@@ -13,6 +13,7 @@ class DataManagerPRED:
 
     def current_day_functions(self):
         self.get_pred_player_stats()
+        self.db_manager.commit()
 
     def get_pred_player_stats(self):
         select_season = database.entity(Seasons)
@@ -50,7 +51,7 @@ class DataManagerPRED:
             for fd_player_stats in fd_players_stats:
                 select_fd_team = database.entity(FdTeams)
                 select_fd_team.add_where(FdTeams.id, fd_player_stats.get(FdPlayerStats.team_id))
-                fd_team = self.db_manager.get(select_fd_team)
+                fd_team = self.db_manager.select_single(select_fd_team)
                 nhl_team_id = fd_team.get(FdTeams.nhl_id)
                 select_fd_player = database.entity(FdPlayers)
                 select_fd_player.add_where(FdPlayers.id, fd_player_stats.get(FdPlayerStats.player_id))
@@ -137,7 +138,7 @@ class DataManagerPRED:
         fd_score += saves * 0.8
         fd_score -= ga * 4
         insert_goalie_pred_stats.set(GoaliePredStats.fd_score, fd_score)
-        self.db_manager.insert(insert_goalie_pred_stats)
+        self.db_manager.insert(insert_goalie_pred_stats, commit=False)
 
     def insert_player_stats(self, player_stats_list, nhl_game_id, nhl_team_id, nhl_player_id):
         goals = 0.0
@@ -189,4 +190,4 @@ class DataManagerPRED:
         fd_score += shots * 1.6
         fd_score += blocked * 1.6
         insert_player_pred_stats.set(PlayerPredStats.fd_score, fd_score)
-        self.db_manager.insert(insert_player_pred_stats)
+        self.db_manager.insert(insert_player_pred_stats, commit=False)
