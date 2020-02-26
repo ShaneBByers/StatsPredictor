@@ -5,8 +5,8 @@ from collections import OrderedDict
 
 class WebConnector:
 
-    def __init__(self, logger_name, base_url):
-        self.logger = logging.getLogger(logger_name)
+    def __init__(self, base_url):
+        self.logger = logging.getLogger(__name__)
         self.base_url = base_url
         self.__last = ""
 

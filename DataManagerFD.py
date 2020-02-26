@@ -8,13 +8,12 @@ from Generated.DatabaseClasses import *
 
 class DataManagerFD:
 
-    def __init__(self, logger_name, db_manager):
-        self.logger = logging.getLogger(logger_name)
+    def __init__(self, db_manager):
+        self.logger = logging.getLogger(__name__)
 
         self.db_manager = db_manager
 
-        self.web_soup_manager = WebSoupManager(logger_name,
-                                               Constants.ROTOGRINDERS_URL)
+        self.web_soup_manager = WebSoupManager(Constants.ROTOGRINDERS_URL)
 
     def current_day_functions(self):
         soup = self.web_soup_manager.get_soup()

@@ -9,24 +9,28 @@ from database import database
 
 class DataManager:
 
-    def __init__(self, logger_name, all_active=True):
-        self.logger = logging.getLogger(logger_name)
+    def __init__(self, all_active=True):
+        self.logger = logging.getLogger(__name__)
 
-        self.db_manager = database.connect(logger_name,
-                                           Constants.DB_HOST,
+        self.db_manager = database.connect(Constants.DB_HOST,
                                            Constants.DB_USERNAME,
                                            Constants.DB_PASSWORD,
                                            Constants.DB_NAME)
         if all_active:
-            self.manager_nhl = DataManagerNHL(logger_name, self.db_manager)
-            self.manager_fd = DataManagerFD(logger_name, self.db_manager)
-            self.manager_pred = DataManagerPRED(logger_name, self.db_manager)
-            self.manager_lp = DataManagerLP(logger_name, self.db_manager)
+            self.manager_nhl = DataManagerNHL(self.db_manager)
+            self.manager_fd = DataManagerFD(self.db_manager)
+            self.manager_pred = DataManagerPRED(self.db_manager)
+            self.manager_lp = DataManagerLP(self.db_manager)
 
     def update_classes_file(self, file_name):
         self.db_manager.update_classes_file(file_name)
 
     def current_day_functions(self):
+        self.logger.debug("DEBUG")
+        self.logger.info("INFO")
+        self.logger.warning("WARN")
+        self.logger.error("ERROR")
+        self.logger.critical("FATAL")
         self.manager_nhl.current_day_functions()
         self.manager_fd.current_day_functions()
         self.manager_pred.current_day_functions()

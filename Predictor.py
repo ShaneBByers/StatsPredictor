@@ -1,8 +1,8 @@
-import Logger
+from Logger import Logger
 from DataManager import DataManager
 
-logger_name = "Predictor"
-Logger.setup(logger_name)
-manager = DataManager(logger_name)
-# manager.current_day_functions()
-manager.manager_lp.current_day_functions()
+logger = Logger()
+logger.setup_local()
+
+manager = DataManager()
+manager.current_day_functions()

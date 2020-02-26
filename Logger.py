@@ -1,32 +1,35 @@
 import logging
+from logging.handlers import RotatingFileHandler
 
 
-def setup(logger_name):
-    log = logging.getLogger(logger_name)
-    log.setLevel(logging.INFO)
+class Logger:
 
-    log = logging.getLogger(logger_name)
-    log.setLevel(logging.INFO)
+    def __init__(self):
+        self.log = logging.getLogger()
+        self.log.setLevel(logging.DEBUG)
+        self.simple_format = logging.Formatter(
+            '%(asctime)s - ' +
+            '%(levelname)s - ' +
+            '%(message)s - ' +
+            'FILE: %(filename)s - ' +
+            'FUNC: %(funcName)s - ' +
+            'LINE: %(lineno)d')
 
-    c_handler = logging.StreamHandler()
-    f_handler = logging.FileHandler(logger_name + ".log")
-    c_handler.setLevel(logging.NOTSET)
-    f_handler.setLevel(logging.NOTSET)
+    def add_console_handler(self):
+        console_handler = logging.StreamHandler()
+        console_handler.setLevel(logging.DEBUG)
+        console_handler.setFormatter(self.simple_format)
+        self.log.addHandler(console_handler)
 
-    c_format = logging.Formatter(
-        '%(message)s - ' +
-        'FILE: %(filename)s - ' +
-        'FUNC: %(funcName)s - ' +
-        'LINE: %(lineno)d')
-    f_format = logging.Formatter(
-        '%(asctime)s - ' +
-        'MESSAGE: %(message)s - %(levelname)s - ' +
-        'FILE: %(filename)s - ' +
-        'FUNC: %(funcName)s - ' +
-        'LINE: %(lineno)d')
+    def add_file_handler(self, log_file_name, log_level):
+        file_handler = RotatingFileHandler(log_file_name, maxBytes=10485760, backupCount=10)
+        file_handler.setLevel(log_level)
+        file_handler.setFormatter(self.simple_format)
+        self.log.addHandler(file_handler)
 
-    c_handler.setFormatter(c_format)
-    f_handler.setFormatter(f_format)
+    def setup_local(self):
+        self.add_console_handler()
 
-    log.addHandler(c_handler)
-    log.addHandler(f_handler)
+    def setup_current_day(self):
+        self.add_file_handler("INFO.log", logging.INFO)
+        self.add_file_handler("ERROR.log", logging.ERROR)

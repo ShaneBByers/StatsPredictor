@@ -4,8 +4,8 @@ from datetime import datetime
 
 class Modifier:
 
-    def __init__(self, logger_name, db_manager):
-        self.logger = logging.getLogger(logger_name)
+    def __init__(self, db_manager):
+        self.logger = logging.getLogger(__name__)
         self.db_manager = db_manager
         self.date_format = "%Y-%m-%d"
         self.datetime_format = "%Y-%m-%d %H:%M:%S"

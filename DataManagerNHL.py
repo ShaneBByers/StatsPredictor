@@ -8,16 +8,14 @@ from Generated.DatabaseClasses import *
 
 
 class DataManagerNHL:
-    def __init__(self, logger_name, db_manager):
-        self.logger = logging.getLogger(logger_name)
+    def __init__(self, db_manager):
+        self.logger = logging.getLogger(__name__)
 
         self.db_manager = db_manager
 
-        self.web_manager = WebManager(logger_name,
-                                      Constants.WEB_BASE_URL)
+        self.web_manager = WebManager(Constants.WEB_BASE_URL)
 
-        self.modifier = Modifier(logger_name,
-                                 self.db_manager)
+        self.modifier = Modifier(self.db_manager)
 
     def current_day_functions(self):
         team_stats_select = database.entity(TeamStats)

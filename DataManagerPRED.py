@@ -6,8 +6,8 @@ from Generated.DatabaseClasses import *
 
 class DataManagerPRED:
 
-    def __init__(self, logger_name, db_manager):
-        self.logger = logging.getLogger(logger_name)
+    def __init__(self, db_manager):
+        self.logger = logging.getLogger(__name__)
 
         self.db_manager = db_manager
 
