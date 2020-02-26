@@ -58,8 +58,11 @@ class DataManagerLP:
                               "PRED_SCORE": player_goalie_pred_stat.get(pred_stat_table.fd_score),
                               "SALARY": fd_player_stat.get(FdPlayerStats.salary),
                               "LP_VARIABLE": LpVariable(str(fd_player.get(FdPlayers.nhl_id)),  cat="Binary")}
-                pred_score_dict[fd_player.get(FdPlayers.nhl_id)] = player_goalie_pred_stat.get(pred_stat_table.fd_score)
-                selection_dict[fd_player_stat.get(FdPlayerStats.position)].append(inner_dict)
+                position = fd_player_stat.get(FdPlayerStats.position)
+                nhl_id = fd_player.get(FdPlayers.nhl_id)
+                if inner_dict not in selection_dict[position]:
+                    pred_score_dict[nhl_id] = player_goalie_pred_stat.get(pred_stat_table.fd_score)
+                    selection_dict[position].append(inner_dict)
         return selection_dict, pred_score_dict
 
     @staticmethod

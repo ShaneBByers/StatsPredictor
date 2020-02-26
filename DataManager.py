@@ -26,11 +26,6 @@ class DataManager:
         self.db_manager.update_classes_file(file_name)
 
     def current_day_functions(self):
-        self.logger.debug("DEBUG")
-        self.logger.info("INFO")
-        self.logger.warning("WARN")
-        self.logger.error("ERROR")
-        self.logger.critical("FATAL")
         self.manager_nhl.current_day_functions()
         self.manager_fd.current_day_functions()
         self.manager_pred.current_day_functions()
