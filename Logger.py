@@ -73,7 +73,7 @@ class BufferingSMTPHandler(BufferingHandler):
         if len(self.buffer) > 0:
             msg = EmailMessage()
             msg['From'] = self.from_email
-            msg['To'] = ','.join(self.to_email)
+            msg['To'] = self.to_email
             msg['Subject'] = self.subject
             msg['Date'] = datetime.now()
             content = ""
