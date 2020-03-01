@@ -29,7 +29,8 @@ class Logger:
 
     def setup_local(self):
         self.add_console_handler()
+        self.add_file_handler("WARNING.log", logging.WARNING)
 
     def setup_current_day(self):
-        self.add_file_handler("INFO.log", logging.INFO)
-        self.add_file_handler("ERROR.log", logging.ERROR)
+        self.add_file_handler("DEBUG.log", logging.DEBUG)
+        self.add_file_handler("WARNING.log", logging.WARNING)

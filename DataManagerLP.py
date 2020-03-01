@@ -21,7 +21,7 @@ class DataManagerLP:
         select_slate = database.entity(FdSlates)
         select_slate.add_where(FdSlates.date, date.today())
         slate = self.db_manager.select_single(select_slate)
-        self.logger.info("Using SLATE with ID " + slate.get(FdSlates.id))
+        self.logger.info("Using SLATE with ID " + str(slate.get(FdSlates.id)))
         select_games = database.entity(FdGames)
         select_games.add_where(FdGames.slate_id, slate.get(FdSlates.id))
         games = self.db_manager.select_all(select_games)

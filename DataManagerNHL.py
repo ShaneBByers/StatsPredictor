@@ -30,7 +30,7 @@ class DataManagerNHL:
             last_game_select.add_where(Games.is_home, True)
             last_game = self.db_manager.select_single(last_game_select)
             last_date = last_game.get(Games.date_time).date()
-            self.logger.debug("Using last date as " + last_date)
+            self.logger.debug("Using last date as " + str(last_date))
         else:
             self.logger.debug("No TEAM_STATS selected. Using last date as minimum date.")
             last_date = date.min
@@ -46,7 +46,7 @@ class DataManagerNHL:
         today = date.today()
         games_filter = filter(lambda x: last_date < x.get(Games.date_time).date() < today, season_games)
         selected_games = list(games_filter)
-        self.logger.debug("Filtered to " + str(len(selected_games)) + " games between " + last_date + " and today.")
+        self.logger.debug("Filtered to " + str(len(selected_games)) + " games between " + str(last_date) + " and today.")
         if len(selected_games) > 0:
             self.insert_team_stats(games=selected_games)
             self.insert_player_stats(games=selected_games,
@@ -128,7 +128,7 @@ class DataManagerNHL:
         today = date.today()
         for game in games:
             game_date = game.get(Games.date_time).date()
-            self.logger.debug("Comparing GAME.DATE " + game_date + " to today.")
+            self.logger.debug("Comparing GAME DATE " + str(game_date) + " to today.")
             if game_date < today:
                 additional_stats = self.get_web_values("TEAM_STATS",
                                                        modify_args=(game.get(Games.id)),
@@ -165,7 +165,7 @@ class DataManagerNHL:
         today = date.today()
         for game in games:
             game_date = game.get(Games.date_time).date()
-            self.logger.debug("Comparing GAME.DATE " + game_date + " to today.")
+            self.logger.debug("Comparing GAME DATE " + str(game_date) + " to today.")
             if game_date < today:
                 if is_goalie:
                     additional_stats = self.get_web_values("GOALIE_STATS",
@@ -288,10 +288,10 @@ class DataManagerNHL:
         return return_values
 
     def parse_json(self, json, translations, group_counter, value_counter, col_entity=None):
-        self.logger.debug("Parsing JSON with group counter " +
-                          str(group_counter) +
-                          " and value counter " +
-                          str(value_counter))
+        # self.logger.debug("Parsing JSON with group counter " +
+        #                   str(group_counter) +
+        #                   " and value counter " +
+        #                   str(value_counter))
         if group_counter <= len(translations[0]):
             translation_index = group_counter - 1
             group_counter += 1

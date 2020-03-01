@@ -103,7 +103,7 @@ class DataManagerFD:
             fd_team_insert.set(FdTeams.nhl_id, nhl_team.get(Teams.id))
             self.db_manager.insert(fd_team_insert, commit=False)
             fd_team = self.db_manager.select_single(fd_team_select)
-        self.logger.info("Found FD_TEAM with ID " + fd_team.get(FdTeams.id))
+        self.logger.info("Found FD_TEAM with ID " + str(fd_team.get(FdTeams.id)))
         return fd_team
 
     def get_nhl_game_id(self, home_nhl_id):
@@ -123,7 +123,7 @@ class DataManagerFD:
         nhl_game_select.add_where(Games.team_id, home_nhl_id)
         nhl_game_select.add_where(Games.is_home, True)
         nhl_game = self.db_manager.select_single(nhl_game_select)
-        self.logger.info("Found NHL_GAME with ID " + nhl_game.get(Games.id))
+        self.logger.info("Found NHL_GAME with ID " + str(nhl_game.get(Games.id)))
         return nhl_game.get(Games.id)
 
     def get_soup_player_stats(self, games_dict):
