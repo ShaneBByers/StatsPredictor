@@ -1,7 +1,7 @@
 import logging
 from datetime import date, datetime
 from database import database
-from pulp import LpProblem, LpAffineExpression, LpVariable, LpStatus, LpMaximize
+from pulp import LpProblem, LpAffineExpression, LpVariable, LpStatus, LpMaximize, PulpSolverError
 from Generated.DatabaseClasses import *
 
 
@@ -21,23 +21,24 @@ class DataManagerLP:
         select_slate = database.entity(FdSlates)
         select_slate.add_where(FdSlates.date, date.today())
         slate = self.db_manager.select_single(select_slate)
+        self.logger.info("Using SLATE with ID " + slate.get(FdSlates.id))
         select_games = database.entity(FdGames)
         select_games.add_where(FdGames.slate_id, slate.get(FdSlates.id))
         games = self.db_manager.select_all(select_games)
+        self.logger.debug("Found " + str(len(games)) + " FD_GAMES for consideration")
         fd_player_stats = []
         for game in games:
             extend_list_select = database.entity(FdPlayerStats)
             extend_list_select.add_where(FdPlayerStats.game_id, game.get(FdGames.id))
             extend_list = self.db_manager.select_all(extend_list_select)
             fd_player_stats.extend(extend_list)
-
+        self.logger.debug("Found " + str(len(fd_player_stats)) + "FD_PLAYER_STATS for consideration")
         selection_dict, pred_score_dict = self.get_dicts_from_player_stats(fd_player_stats)
-
         problem_status, problem_variables = self.solve_lp_problem(selection_dict)
-
         self.insert_lp_data(slate, problem_status, problem_variables, pred_score_dict)
 
     def get_dicts_from_player_stats(self, fd_player_stats):
+        self.logger.debug("Attempting to get selection and pred score dictionaries for all player stats.")
         selection_dict = {'C': [],
                           'W': [],
                           'D': [],
@@ -62,16 +63,27 @@ class DataManagerLP:
                 position = fd_player_stat.get(FdPlayerStats.position)
                 nhl_id = fd_player.get(FdPlayers.nhl_id)
                 if inner_dict not in selection_dict[position]:
+                    self.logger.debug("Creating dictionaries for NHL_PLAYER with ID " + str(nhl_id))
                     pred_score_dict[nhl_id] = player_goalie_pred_stat.get(pred_stat_table.fd_score)
                     selection_dict[position].append(inner_dict)
+                else:
+                    self.logger.warning("NHL_PLAYER with ID " +
+                                        str(nhl_id) +
+                                        " exists on multiple teams. Prediction could be wrong.")
         return selection_dict, pred_score_dict
 
-    @staticmethod
-    def solve_lp_problem(selection_dict):
+    def solve_lp_problem(self, selection_dict):
+        self.logger.info("Attempting to solve LP problem")
         all_vars = selection_dict['C'].copy()
         all_vars.extend(selection_dict['W'])
         all_vars.extend(selection_dict['D'])
         all_vars.extend(selection_dict['G'])
+
+        self.logger.debug("Solving with " + str(len(all_vars)) + " total variables")
+        self.logger.debug("Solving with " + str(len(selection_dict['C'])) + " Centers")
+        self.logger.debug("Solving with " + str(len(selection_dict['W'])) + " Wingers")
+        self.logger.debug("Solving with " + str(len(selection_dict['D'])) + " Defense")
+        self.logger.debug("Solving with " + str(len(selection_dict['G'])) + " Goalies")
 
         problem = LpProblem("Lineup_Solver", LpMaximize)
         problem += LpAffineExpression([(var["LP_VARIABLE"], var["PRED_SCORE"]) for var in all_vars])
@@ -80,11 +92,19 @@ class DataManagerLP:
         problem += LpAffineExpression([(var["LP_VARIABLE"], 1) for var in selection_dict['D']]) == 2
         problem += LpAffineExpression([(var["LP_VARIABLE"], 1) for var in selection_dict['G']]) == 1
         problem += LpAffineExpression([(var["LP_VARIABLE"], var["SALARY"]) for var in all_vars]) <= 55000
-        problem.solve()
+
+        try:
+            problem.solve()
+        except PulpSolverError as e:
+            self.logger.exception("Error solving LP problem with STATUS " +
+                                  problem.status +
+                                  " possibly due to duplicate variables?")
+            raise e
 
         return problem.status, problem.variables()
 
     def insert_lp_data(self, slate, problem_status, problem_variables, pred_score_dict):
+        self.logger.info("Attempting to insert new LP data results to DB")
         insert_lp_players = []
         total_salary = 0
         total_points = 0.0
@@ -102,8 +122,18 @@ class DataManagerLP:
                 insert_lp_player.set(LpPlayers.salary, fd_player_stats.get(FdPlayerStats.salary))
                 insert_lp_player.set(LpPlayers.fd_score, pred_score_dict[int(lp_variable.name)])
                 insert_lp_players.append(insert_lp_player)
+                self.logger.info(str(fd_player.get(FdPlayers.full_name)) +
+                                  " POSITION: " +
+                                  fd_player_stats.get(FdPlayerStats.position) +
+                                  " SALARY: $" +
+                                  str(fd_player_stats.get(FdPlayerStats.salary)) +
+                                  " SCORE: " +
+                                  str(pred_score_dict[int(lp_variable.name)]))
                 total_salary += fd_player_stats.get(FdPlayerStats.salary)
                 total_points += pred_score_dict[int(lp_variable.name)]
+
+        self.logger.info("TOTAL SALARY: $" + str(total_salary))
+        self.logger.info("TOTAL POINTS: " + str(total_points))
 
         insert_lp_lineup = database.entity(LpLineup)
         insert_lp_lineup.set(LpLineup.slate_id, slate.get(FdSlates.id))

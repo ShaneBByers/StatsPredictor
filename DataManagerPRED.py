@@ -20,10 +20,12 @@ class DataManagerPRED:
         select_season = database.entity(Seasons)
         select_season.add_where(Seasons.is_current, True)
         season = self.db_manager.select_single(select_season)
+        self.logger.debug("Got SEASON with ID " + str(season.get(Seasons.id)))
         select_player_pred_stats = database.entity(PlayerPredStats)
         select_player_pred_stats.add_order_by(PlayerPredStats.game_id, False)
         last_player_pred_stats = self.db_manager.select_single(select_player_pred_stats)
         last_game_id = last_player_pred_stats.get(PlayerPredStats.game_id)
+        self.logger.debug("Got last PLAYER_PRED_STATS with GAME_ID " + str(last_game_id))
         select_last_completed_game = database.entity(Games)
         select_last_completed_game.add_where(Games.id, last_game_id)
         select_last_completed_game.add_where(Games.is_home, True)
@@ -32,11 +34,16 @@ class DataManagerPRED:
         start_date_time = start_date_time.combine(start_date_time.date(), datetime.max.time())
         end_date_time = datetime.today()
         end_date_time = end_date_time.combine(end_date_time.date(), datetime.min.time())
+        self.logger.info("Selecting games between " +
+                         str(start_date_time) +
+                         " and " +
+                         str(end_date_time))
         select_games_to_complete = database.entity(Games)
         select_games_to_complete.add_where(Games.date_time, start_date_time, ">")
         select_games_to_complete.add_where(Games.date_time, end_date_time, "<")
         select_games_to_complete.add_where(Games.is_home, True)
         games_to_complete = self.db_manager.select_all(select_games_to_complete)
+        self.logger.info("Successfully found " + str(len(games_to_complete)) + " GAMES to create PRED_STATS for")
         for game_to_complete in games_to_complete:
             self.get_pred_player_stats_for_game(season, game_to_complete)
 
@@ -46,10 +53,13 @@ class DataManagerPRED:
         fd_game = self.db_manager.select_single(select_fd_game)
         nhl_players_dict = {}
         if fd_game is not None:
+            self.logger.info("Found FD_GAME with ID " + str(fd_game.get(FdGames.id)))
             select_fd_players_stats = database.entity(FdPlayerStats)
             select_fd_players_stats.add_where(FdPlayerStats.game_id, fd_game.get(FdGames.id))
             fd_players_stats = self.db_manager.select_all(select_fd_players_stats)
             for fd_player_stats in fd_players_stats:
+                self.logger.info("Attempting to find NHL_PLAYER and NHL_TEAM for FD_PLAYER with ID " +
+                                 str(fd_player_stats.get(FdPlayerStats.player_id)))
                 select_fd_team = database.entity(FdTeams)
                 select_fd_team.add_where(FdTeams.id, fd_player_stats.get(FdPlayerStats.team_id))
                 fd_team = self.db_manager.select_single(select_fd_team)
@@ -63,9 +73,16 @@ class DataManagerPRED:
                         stats_table = GoalieStats
                     else:
                         stats_table = PlayerStats
+                    self.logger.debug("Found NHL_PLAYER with ID " +
+                                      str(nhl_player_id) +
+                                      " and NHL_TEAM with ID " +
+                                      str(nhl_team_id))
                     nhl_players_dict[nhl_player_id] = {"TEAM_ID": nhl_team_id,
                                                        "STATS_TABLE": stats_table}
+                else:
+                    self.logger.warning("Unable to find NHL_PLAYER_ID for " + fd_player.get(FdPlayers.full_name))
         else:
+            self.logger.info("Unable to find matching FD_GAME. Using NHL_GOALIE/PLAYER_STATS instead.")
             select_nhl_players_stats = database.entity(PlayerStats)
             select_nhl_players_stats.add_where(PlayerStats.game_id, game_to_complete.get(Games.id))
             nhl_players_stats = self.db_manager.select_all(select_nhl_players_stats)
@@ -73,6 +90,10 @@ class DataManagerPRED:
                 select_nhl_player = database.entity(Players)
                 select_nhl_player.add_where(Players.id, nhl_player_stats.get(PlayerStats.player_id))
                 nhl_player = self.db_manager.select_single(select_nhl_player)
+                self.logger.debug("Found NHL_PLAYER with ID " +
+                                  str(nhl_player.get(Players.id)) +
+                                  " and NHL_TEAM with ID " +
+                                  str(nhl_player_stats.get(PlayerStats.team_id)))
                 nhl_players_dict[nhl_player.get(Players.id)] = {"TEAM_ID": nhl_player_stats.get(PlayerStats.team_id),
                                                                 "STATS_TABLE": PlayerStats}
             select_nhl_goalies_stats = database.entity(GoalieStats)
@@ -82,6 +103,10 @@ class DataManagerPRED:
                 select_nhl_goalie = database.entity(Players)
                 select_nhl_goalie.add_where(Players.id, nhl_goalie_stats.get(GoalieStats.player_id))
                 nhl_goalie = self.db_manager.select_single(select_nhl_goalie)
+                self.logger.debug("Found NHL_PLAYER with ID " +
+                                  str(nhl_goalie.get(Players.id)) +
+                                  " and NHL_TEAM with ID " +
+                                  str(nhl_goalie_stats.get(GoalieStats.team_id)))
                 nhl_players_dict[nhl_goalie.get(Players.id)] = {"TEAM_ID": nhl_goalie_stats.get(PlayerStats.team_id),
                                                                 "STATS_TABLE": GoalieStats}
         select_first_game = database.entity(Games)
@@ -89,12 +114,17 @@ class DataManagerPRED:
         select_first_game.add_where(Games.season_id, season.get(Seasons.id))
         select_first_game.add_order_by(Games.id)
         first_game = self.db_manager.select_single(select_first_game)
+        self.logger.debug("Using first GAME of the season with ID " + str(first_game.get(Games.id)))
         for nhl_player_id, info_dict in nhl_players_dict.items():
             stats_table = info_dict["STATS_TABLE"]
             select_player_goalie_stats = database.entity(stats_table)
             select_player_goalie_stats.add_where(stats_table.player_id, nhl_player_id)
             select_player_goalie_stats.add_where(stats_table.game_id, first_game.get(Games.id), ">=")
             player_goalie_stats = self.db_manager.select_all(select_player_goalie_stats)
+            self.logger.debug("Found " +
+                              str(len(player_goalie_stats)) +
+                              " previous PLAYER/GOALIE_STATS for NHL_PLAYER with ID " +
+                              str(nhl_player_id))
             if stats_table == GoalieStats:
                 self.insert_goalie_stats(goalie_stats_list=player_goalie_stats,
                                          nhl_game_id=game_to_complete.get(Games.id),
@@ -107,6 +137,10 @@ class DataManagerPRED:
                                          nhl_player_id=nhl_player_id)
 
     def insert_goalie_stats(self, goalie_stats_list, nhl_game_id, nhl_team_id, nhl_player_id):
+        self.logger.debug("Getting all necessary PRED stats for " +
+                          str(len(goalie_stats_list)) +
+                          " GAMES for GOALIE with ID " +
+                          str(nhl_player_id))
         saves = 0.0
         ga = 0.0
         is_win = 0.0
@@ -142,6 +176,10 @@ class DataManagerPRED:
         self.db_manager.insert(insert_goalie_pred_stats, commit=False)
 
     def insert_player_stats(self, player_stats_list, nhl_game_id, nhl_team_id, nhl_player_id):
+        self.logger.debug("Getting all necessary PRED stats for " +
+                          str(len(player_stats_list)) +
+                          " GAMES for PLAYER with ID " +
+                          str(nhl_player_id))
         goals = 0.0
         assists = 0.0
         ppg = 0.0
