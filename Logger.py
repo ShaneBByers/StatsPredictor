@@ -81,9 +81,7 @@ class BufferingSMTPHandler(BufferingHandler):
                 content += self.format(record) + "\n"
             msg.set_content(content)
             server = smtplib.SMTP(self.host)
-            server.ehlo()
-            server.starttls(*(self.username, self.password))
-            server.ehlo()
+            server.starttls()
             server.login(self.username, self.password)
             server.send_message(msg)
             server.quit()
