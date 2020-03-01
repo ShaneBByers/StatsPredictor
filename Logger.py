@@ -1,5 +1,6 @@
 import logging
-from logging.handlers import RotatingFileHandler
+import Constants
+from logging.handlers import RotatingFileHandler, SMTPHandler
 
 
 class Logger:
@@ -27,6 +28,17 @@ class Logger:
         file_handler.setFormatter(self.simple_format)
         self.log.addHandler(file_handler)
 
+    def add_email_handler(self):
+        email_handler = SMTPHandler(Constants.LOGGING_EMAIL_HOST,
+                                    Constants.LOGGING_FROM_EMAIL,
+                                    [Constants.LOGGING_TO_EMAIL],
+                                    "PREDICTOR WARNING/ERROR",
+                                    credentials=(Constants.LOGGING_EMAIL_USERNAME,
+                                                 Constants.LOGGING_EMAIL_PASSWORD))
+        email_handler.setLevel(logging.WARNING)
+        email_handler.setFormatter(self.simple_format)
+        self.log.addHandler(email_handler)
+
     def setup_local(self):
         self.add_console_handler()
         self.add_file_handler("WARNING.log", logging.WARNING)
@@ -34,3 +46,8 @@ class Logger:
     def setup_current_day(self):
         self.add_file_handler("DEBUG.log", logging.DEBUG)
         self.add_file_handler("WARNING.log", logging.WARNING)
+        self.add_email_handler()
+
+    def setup_testing(self):
+        self.add_console_handler()
+        self.add_email_handler()
