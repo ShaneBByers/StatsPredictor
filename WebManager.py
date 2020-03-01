@@ -1,14 +1,18 @@
 import logging
-from WebConnector import WebConnector
+import requests
+from collections import OrderedDict
 
 
 class WebManager:
 
     def __init__(self, base_url):
         self.logger = logging.getLogger(__name__)
-        self.connector = WebConnector(base_url)
+        self.base_url = base_url
+        self.__last = ""
 
     def get(self, append_string):
-        values = self.connector.get(append_string)
-        self.logger.info("Get request: " + self.connector.last)
+        self.__last = self.base_url + append_string
+        self.logger.debug("Attempting request of: " + self.__last)
+        values = requests.get(self.__last).json(object_pairs_hook=OrderedDict)
+        self.logger.info("Successfully requested: " + self.__last)
         return values

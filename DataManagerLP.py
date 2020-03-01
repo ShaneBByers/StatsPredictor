@@ -13,6 +13,7 @@ class DataManagerLP:
         self.db_manager = db_manager
 
     def current_day_functions(self):
+        self.logger.info("RUNNING CURRENT DAY FUNCTIONS FOR LP")
         self.calculate_lineup()
         self.db_manager.commit()
 

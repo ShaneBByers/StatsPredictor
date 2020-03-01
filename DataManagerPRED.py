@@ -12,6 +12,7 @@ class DataManagerPRED:
         self.db_manager = db_manager
 
     def current_day_functions(self):
+        self.logger.info("RUNNING CURRENT DAY FUNCTIONS FOR PRED")
         self.get_pred_player_stats()
         self.db_manager.commit()
 

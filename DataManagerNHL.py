@@ -18,28 +18,35 @@ class DataManagerNHL:
         self.modifier = Modifier(self.db_manager)
 
     def current_day_functions(self):
+        self.logger.info("RUNNING CURRENT DAY FUNCTIONS FOR NHL")
         team_stats_select = database.entity(TeamStats)
         team_stats_select.add_order_by(TeamStats.game_id, False)
         team_stats = self.db_manager.select_single(team_stats_select)
         if team_stats is not None:
+            self.logger.debug("Got TEAM_STATS with GAME_ID: " + str(team_stats.get(TeamStats.game_id)))
             last_game_id = team_stats.get(TeamStats.game_id)
             last_game_select = database.entity(Games)
             last_game_select.add_where(Games.id, last_game_id)
             last_game_select.add_where(Games.is_home, True)
             last_game = self.db_manager.select_single(last_game_select)
             last_date = last_game.get(Games.date_time).date()
+            self.logger.debug("Using last date as " + last_date)
         else:
+            self.logger.debug("No TEAM_STATS selected. Using last date as minimum date.")
             last_date = date.min
         season_select = database.entity(Seasons)
         season_select.add_where(Seasons.is_current, True)
         season = self.db_manager.select_single(season_select)
+        self.logger.debug("Got SEASON with ID: " + str(season.get(Seasons.id)))
         season_games_select = database.entity(Games)
         season_games_select.add_where(Games.season_id, season.get(Seasons.id))
         season_games_select.add_where(Games.is_home, True)
         season_games = self.db_manager.select_all(season_games_select)
+        self.logger.debug("Got " + str(len(season_games)) + " GAMES.")
         today = date.today()
         games_filter = filter(lambda x: last_date < x.get(Games.date_time).date() < today, season_games)
         selected_games = list(games_filter)
+        self.logger.debug("Filtered to " + str(len(selected_games)) + " games between " + last_date + " and today.")
         if len(selected_games) > 0:
             self.insert_team_stats(games=selected_games)
             self.insert_player_stats(games=selected_games,
@@ -49,15 +56,21 @@ class DataManagerNHL:
         self.db_manager.commit()
 
     def insert_teams(self):
+        self.logger.debug("Attempting to get TEAMS values from web.")
         insert_values = self.get_web_values("TEAMS")
+        self.logger.info("Successfully got " + str(len(insert_values)) + " TEAMS values from web.")
         self.db_manager.insert(insert_values)
 
     def insert_players(self):
+        self.logger.debug("Attempting to get PLAYERS values from web.")
         insert_values = self.get_web_values("PLAYERS")
+        self.logger.info("Successfully got " + str(len(insert_values)) + " PLAYERS values from web.")
         self.db_manager.insert(insert_values)
 
     def insert_seasons(self):
+        self.logger.debug("Attempting to get SEASONS values from web.")
         insert_values = self.get_web_values("SEASONS")
+        self.logger.info("Successfully got " + str(len(insert_values)) + " SEASONS values from web.")
         self.db_manager.insert(insert_values)
 
     def insert_games(self, current_season=True, season_id=None):
@@ -67,10 +80,12 @@ class DataManagerNHL:
         elif season_id is not None:
             season_select.add_where(Seasons.id, season_id)
         season = self.db_manager.select_single(season_select)
+        self.logger.debug("Got SEASON with ID: " + str(season.get(Seasons.id)))
         start_date = self.modifier.date_to_date_string(season.get(Seasons.start_date))
         end_date = self.modifier.date_to_date_string(season.get(Seasons.end_date))
         season_id = season.get(Seasons.id)
         insert_values = self.get_web_values("GAMES", [start_date, end_date], {"SEASON_ID": season_id})
+        self.logger.debug("Successfully got " + str(len(insert_values)) + " GAMES values from web.")
         teams = self.db_manager.select_all(database.entity(Teams))
         team_ids = []
         for team in teams:
@@ -79,13 +94,16 @@ class DataManagerNHL:
         for insert_value in insert_values:
             if insert_value.get(Games.team_id) not in team_ids:
                 remove_game_ids.append(insert_value.get(Games.id))
+        self.logger.debug("Created " + str(len(remove_game_ids)) + " game IDs to remove.")
         remove_games = []
         for remove_game_id in remove_game_ids:
             for insert_value in insert_values:
                 if remove_game_id == insert_value.get(Games.id):
                     remove_games.append(insert_value)
+        self.logger.debug("Created " + str(len(remove_games)) + " games to remove.")
         for remove_game in remove_games:
             insert_values.remove(remove_game)
+        self.logger.debug("Inserting " + str(len(insert_values)) + "GAMES into DB.")
         self.db_manager.insert(insert_values)
 
     def insert_team_stats(self, current_season=True, season_id=None, games=None):
@@ -100,16 +118,24 @@ class DataManagerNHL:
             games_select.add_where(Games.season_id, season.get(Seasons.id))
             games_select.add_where(Games.is_home, True)
             games = self.db_manager.select_all(games_select)
+        self.logger.debug("Inserting TEAM_STATS for SEASON with ID " +
+                          str(season_id) +
+                          " and " +
+                          str(len(games)) +
+                          " GAMES.")
         insert_values = []
         translations_dict = self.get_translations(DB_TABLES["TEAM_STATS"])
         today = date.today()
         for game in games:
             game_date = game.get(Games.date_time).date()
+            self.logger.debug("Comparing GAME.DATE " + game_date + " to today.")
             if game_date < today:
-                insert_values.extend(self.get_web_values("TEAM_STATS",
-                                                         modify_args=(game.get(Games.id)),
-                                                         additional_vals=None,
-                                                         translations_dict=translations_dict))
+                additional_stats = self.get_web_values("TEAM_STATS",
+                                                       modify_args=(game.get(Games.id)),
+                                                       additional_vals=None,
+                                                       translations_dict=translations_dict)
+                self.logger.debug("Successfully got " + str(len(additional_stats)) + " TEAM_STATS from web.")
+                insert_values.extend(additional_stats)
         self.db_manager.insert(insert_values, commit=False)
 
     def insert_player_stats(self, current_season=True, season_id=None, games=None, is_goalie=False):
@@ -124,6 +150,13 @@ class DataManagerNHL:
             games_select.add_where(Games.season_id, season.get(Seasons.id))
             games_select.add_where(Games.is_home, True)
             games = self.db_manager.select_all(games_select)
+        self.logger.debug("Inserting " +
+                          "GOALIE_STATS" if is_goalie else "PLAYER_STATS" +
+                          "for SEASON with ID " +
+                          str(season_id) +
+                          " and " +
+                          str(len(games)) +
+                          " GAMES.")
         insert_values = []
         if is_goalie:
             translations_dict = self.get_translations(DB_TABLES["GOALIE_STATS"])
@@ -132,36 +165,45 @@ class DataManagerNHL:
         today = date.today()
         for game in games:
             game_date = game.get(Games.date_time).date()
+            self.logger.debug("Comparing GAME.DATE " + game_date + " to today.")
             if game_date < today:
                 if is_goalie:
-                    insert_values.extend(self.get_web_values("GOALIE_STATS",
-                                                             modify_args=(game.get(Games.id)),
-                                                             additional_vals={"GAME_ID": game.get(Games.id)},
-                                                             translations_dict=translations_dict))
+                    additional_stats = self.get_web_values("GOALIE_STATS",
+                                                           modify_args=(game.get(Games.id)),
+                                                           additional_vals={"GAME_ID": game.get(Games.id)},
+                                                           translations_dict=translations_dict)
+                    self.logger.debug("Successfully got " + str(len(additional_stats)) + " GOALIE_STATS from web.")
                 else:
-                    insert_values.extend(self.get_web_values("PLAYER_STATS",
-                                                             modify_args=(game.get(Games.id)),
-                                                             additional_vals={"GAME_ID": game.get(Games.id)},
-                                                             translations_dict=translations_dict))
+                    additional_stats = self.get_web_values("PLAYER_STATS",
+                                                           modify_args=(game.get(Games.id)),
+                                                           additional_vals={"GAME_ID": game.get(Games.id)},
+                                                           translations_dict=translations_dict)
+                    self.logger.debug("Successfully got " + str(len(additional_stats)) + " PLAYER_STATS from web.")
+                insert_values.extend(additional_stats)
         current_players_select = database.entity(Players)
         current_players = self.db_manager.select_all(current_players_select)
         current_player_ids = list(map(lambda x: x.get(Players.id), current_players))
+        self.logger.debug("PLAYERS currently has " + str(len(current_player_ids)) + " entities in DB.")
         insert_new_player_ids = []
         for insert_value in insert_values:
             insert_value_id = insert_value.get(PlayerStats.player_id)
             if insert_value_id not in current_player_ids and insert_value_id not in insert_new_player_ids:
+                self.logger.debug("Adding PLAYER with ID " + str(insert_value_id) + " to list of new players.")
                 insert_new_player_ids.append(insert_value_id)
         if len(insert_new_player_ids) > 0:
             insert_new_players = []
             new_player_translation_dict = self.get_translations(DB_TABLES["PLAYERS"], True)
             for insert_new_player_id in insert_new_player_ids:
-                insert_new_players.extend(self.get_web_values("PLAYERS",
-                                                              modify_args=insert_new_player_id,
-                                                              translations_dict=new_player_translation_dict))
+                additional_players = self.get_web_values("PLAYERS",
+                                                         modify_args=insert_new_player_id,
+                                                         translations_dict=new_player_translation_dict)
+                self.logger.debug("Successfully got " + str(len(additional_players)) + " PLAYERS from web.")
+                insert_new_players.extend(additional_players)
             self.db_manager.insert(insert_new_players, commit=False)
         self.db_manager.insert(insert_values, commit=False)
 
     def update_game_times(self, season_id=None):
+        self.logger.info("Attempting to update game times for SEASON with ID " + str(season_id))
         games_select = database.entity(Games)
         games_select.add_where(Games.is_home, True)
         if season_id is not None:
@@ -173,24 +215,34 @@ class DataManagerNHL:
         for team in teams:
             teams_dict[team.get(Teams.id)] = team.get(Teams.timezone_offset)
         for game in games:
+            self.logger.debug("Attempting to update game time of GAME with ID " + str(game.get(Games.id)))
             game_start = game.get(Games.date_time)
             offset = teams_dict[game.get(Games.team_id)]
+            self.logger.debug("Using offset " + str(offset) + " from TEAM with ID " + str(game.get(Games.team_id)))
             game_start += timedelta(hours=offset)
+            self.logger.debug("New game start time of " + str(game_start))
             game.set(Games.date_time, game_start)
             game.add_where(Games.id, game.get(Games.id))
         self.db_manager.update(games)
 
     def full_season(self, season_id):
+        self.logger.info("Attempting to log all information from the entire season for SEASON with ID" + str(season_id))
+        self.logger.info("Inserting all games for season")
         self.insert_games(current_season=False,
                           season_id=season_id)
+        self.logger.info("Updating all game times for season")
         self.update_game_times(season_id=season_id)
+        self.logger.info("Inserting all team stats for season")
         self.insert_team_stats(current_season=False,
                                season_id=season_id)
+        self.logger.info("Inserting all player stats for season")
         self.insert_player_stats(current_season=False,
                                  season_id=season_id)
+        self.logger.info("Inserting all goalie stats for season")
         self.insert_player_stats(current_season=False,
                                  season_id=season_id,
                                  is_goalie=True)
+        self.db_manager.commit()
 
     def get_web_values(self, table_name, modify_args=None, additional_vals=None, translations_dict=None):
         return_values = []
@@ -206,6 +258,7 @@ class DataManagerNHL:
                 json = self.web_manager.get(new_get)
             all_groups_web_values = []
             for group_id, translations_tuple in translations.items():
+                self.logger.debug("Attempting to parse JSON for GROUP with ID " + str(group_id))
                 result = self.parse_json(json, translations_tuple, 1, 0)
                 if not isinstance(result, list):
                     result = [result]
@@ -215,6 +268,7 @@ class DataManagerNHL:
                 for i in range(len(all_groups_web_values)):
                     if len(all_groups_web_values[i]) > len(all_groups_web_values[longest_index]):
                         longest_index = i
+                self.logger.debug("Longest index " + str(longest_index))
                 for i in range(len(all_groups_web_values)):
                     if i != longest_index:
                         for j in range(len(all_groups_web_values[longest_index])):
@@ -222,6 +276,7 @@ class DataManagerNHL:
                                 all_groups_web_values[longest_index][j].update(all_groups_web_values[i][k])
             web_values = all_groups_web_values[longest_index]
             if additional_vals is not None:
+                self.logger.debug("Updating web values with additional values")
                 for web_value in web_values:
                     web_value.update(additional_vals)
             for web_value in web_values:
@@ -233,6 +288,10 @@ class DataManagerNHL:
         return return_values
 
     def parse_json(self, json, translations, group_counter, value_counter, col_entity=None):
+        self.logger.debug("Parsing JSON with group counter " +
+                          str(group_counter) +
+                          " and value counter " +
+                          str(value_counter))
         if group_counter <= len(translations[0]):
             translation_index = group_counter - 1
             group_counter += 1
@@ -296,10 +355,13 @@ class DataManagerNHL:
                     return None
 
     def get_translations(self, table, is_single=False):
+        self.logger.info("Getting translations for TABLE " + table.table_name())
         translation_tables = self.get_translation_tables(table, is_single)
+        self.logger.debug("Successfully got " + str(len(translation_tables)) + " TRANSLATION_TABLES from DB")
         return_translations = {}
         for translation_table in translation_tables:
             translation_columns = self.get_translation_columns(translation_table.get(TranslationTables.id))
+            self.logger.debug("Successfully got " + str(len(translation_columns)) + " TRANSLATION_COLUMNS from DB")
             translations = {}
             for col in translation_columns:
                 new_group_id = col.get(TranslationColumns.group_id)
@@ -311,27 +373,33 @@ class DataManagerNHL:
                     col_values = translations[new_group_id][1]
                     col_values[col] = self.get_translation_values(col.get(TranslationColumns.id))
                     translations[new_group_id] = (translations[new_group_id][0], col_values)
+                self.logger.debug("Successfully added translations values for TRANSLATION_COLUMNS with ID" +
+                                  str(col.get(TranslationColumns.id)))
             return_translations[translation_table] = translations
 
         return return_translations
 
     def get_translation_tables(self, table, is_single=False):
+        self.logger.debug("Getting translation tables for TABLE " + table.table_name())
         translation_table_select = database.entity(TranslationTables)
         translation_table_select.add_where(TranslationTables.ref_table, table.table_name())
         translation_table_select.add_where(TranslationTables.is_single, is_single)
         return self.db_manager.select_all(translation_table_select)
 
     def get_translation_columns(self, table_id):
+        self.logger.debug("Getting translation columns for TABLE with ID " + str(table_id))
         translation_column_select = database.entity(TranslationColumns)
         translation_column_select.add_where(TranslationColumns.table_id, table_id)
         return self.db_manager.select_all(translation_column_select)
 
     def get_translation_group_values(self, group_id):
+        self.logger.debug("Getting translation group values for TRANSLATION_GROUPS with ID " + str(group_id))
         translation_group_select = database.entity(TranslationGroups)
         translation_group_select.add_where(TranslationGroups.id, group_id)
         return self.db_manager.select_all(translation_group_select)
 
     def get_translation_values(self, column_id):
+        self.logger.debug("Getting translation values for TRANSLATION_VALUES with COLUMN_ID " + str(column_id))
         translation_value_select = database.entity(TranslationValues)
         translation_value_select.add_where(TranslationValues.column_id, column_id)
         translation_value_select.add_order_by(TranslationValues.value_no)
