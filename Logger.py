@@ -1,6 +1,6 @@
 import logging
 import Constants
-from logging.handlers import RotatingFileHandler, SMTPHandler
+from logging.handlers import RotatingFileHandler, SMTPHandler, MemoryHandler
 
 
 class Logger:
@@ -35,9 +35,10 @@ class Logger:
                                     "PREDICTOR WARNING/ERROR",
                                     credentials=(Constants.LOGGING_EMAIL_USERNAME,
                                                  Constants.LOGGING_EMAIL_PASSWORD))
-        email_handler.setLevel(logging.WARNING)
         email_handler.setFormatter(self.simple_format)
-        self.log.addHandler(email_handler)
+        memory_handler = MemoryHandler(100, target=email_handler)
+        memory_handler.setLevel(logging.WARNING)
+        self.log.addHandler(memory_handler)
 
     def setup_local(self):
         self.add_console_handler()
