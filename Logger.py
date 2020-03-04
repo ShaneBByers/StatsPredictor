@@ -1,8 +1,6 @@
 import logging
 import Constants
-import smtplib
-from datetime import datetime
-from email.message import EmailMessage
+from EmailManager import EmailManager
 from logging.handlers import RotatingFileHandler, BufferingHandler
 
 
@@ -32,11 +30,11 @@ class Logger:
         self.log.addHandler(file_handler)
 
     def add_email_handler(self):
-        email_handler = BufferingSMTPHandler(Constants.LOGGING_EMAIL_HOST,
-                                             Constants.LOGGING_EMAIL_USERNAME,
-                                             Constants.LOGGING_EMAIL_PASSWORD,
-                                             Constants.LOGGING_FROM_EMAIL,
-                                             Constants.LOGGING_TO_EMAIL,
+        email_manager = EmailManager(Constants.LOGGING_EMAIL_HOST,
+                                     Constants.LOGGING_EMAIL_USERNAME,
+                                     Constants.LOGGING_EMAIL_PASSWORD,
+                                     Constants.LOGGING_FROM_EMAIL)
+        email_handler = BufferingSMTPHandler(email_manager,
                                              "PREDICTOR WARNINGS/ERRORS",
                                              100)
         email_handler.setLevel(logging.WARNING)
@@ -59,30 +57,23 @@ class Logger:
 
 class BufferingSMTPHandler(BufferingHandler):
 
-    def __init__(self, host, username, password, from_email, to_email, subject, capacity):
+    def __init__(self, email_manager, subject, capacity):
         BufferingHandler.__init__(self, capacity)
-        self.host = host
-        self.username = username
-        self.password = password
-        self.from_email = from_email
-        self.to_email = to_email
+        self.email_manager = email_manager
         self.subject = subject
         self.buffer = []
 
+    def emit(self, record):
+        self.buffer.append(record)
+        if self.shouldFlush(record):
+            self.flush()
+
     def flush(self):
         if len(self.buffer) > 0:
-            msg = EmailMessage()
-            msg['From'] = self.from_email
-            msg['To'] = self.to_email
-            msg['Subject'] = self.subject
-            msg['Date'] = datetime.now()
             content = ""
             for record in self.buffer:
                 content += self.format(record) + "\n"
-            msg.set_content(content)
-            server = smtplib.SMTP(self.host)
-            server.starttls()
-            server.login(self.username, self.password)
-            server.send_message(msg)
-            server.quit()
+            self.email_manager.send_email(Constants.LOGGING_TO_EMAIL,
+                                          self.subject,
+                                          content)
             self.buffer = []
