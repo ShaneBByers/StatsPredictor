@@ -3,6 +3,7 @@ import Constants
 from datetime import datetime, date
 from database import database
 from WebSoupManager import WebSoupManager
+from googlesearch import search
 from Generated.DatabaseClasses import *
 
 
@@ -223,8 +224,14 @@ class DataManagerFD:
             insert_fd_player.set(FdPlayers.full_name, player_name)
             insert_fd_player.set(FdPlayers.id, fd_player_id)
             if len(nhl_player) != 1:
-                self.logger.warning("Could not find single NHL_PLAYER match for " + player_name)
-                insert_fd_player.set(FdPlayers.nhl_id, None)
+                self.logger.info("Could not find single NHL_PLAYER match for " + player_name + " in DB")
+                nhl_player_id = self.find_single_player_nhl_id(player_name)
+                if nhl_player_id is not None:
+                    self.logger.debug("Successfully found NHL player ID " + str(nhl_player_id) + " from Google search")
+                    insert_fd_player.set(FdPlayers.nhl_id, nhl_player_id)
+                else:
+                    self.logger.warning("Could not find NHL player ID from DB or from Google search. Using NULL.")
+                    insert_fd_player.set(FdPlayers.nhl_id, None)
             else:
                 self.logger.info("Found NHL player with ID " + str(nhl_player[0].get(Players.id)))
                 insert_fd_player.set(FdPlayers.nhl_id, nhl_player[0].get(Players.id))
@@ -232,3 +239,35 @@ class DataManagerFD:
             fd_player = self.db_manager.select_single(fd_player_select)
         self.logger.debug("Found FD_PLAYER with ID " + str(fd_player.get(FdPlayers.id)))
         return fd_player.get(FdPlayers.id)
+
+    def find_single_player_nhl_id(self, full_name):
+        self.logger.info("Performing Google search to find " + full_name + "'s NHL_ID")
+        query = full_name + " site:nhl.com/player"
+        self.logger.debug("Attempting search for " + query)
+        try:
+            site_result_gen = search(query, stop=1)
+            result = next(site_result_gen)
+            self.logger.info("Successfully searched for '" + query + "' and found '" + result + "'")
+            last_hyphen = result.rfind('-')
+            nhl_player_id = result[last_hyphen + 1:]
+            self.logger.debug("Parsed " + str(nhl_player_id) + " as NHL ID")
+            return nhl_player_id
+        except Exception as e:
+            self.logger.exception("Error in Google search with query " + query)
+            raise e
+
+    def search_all_missing_players(self):
+        self.logger.info("Attempting to update all missing NHL player IDs in FD_PLAYERS")
+        select_fd_players = database.entity(FdPlayers)
+        fd_players = self.db_manager.select_all(select_fd_players)
+        for fd_player in fd_players:
+            if fd_player.get(FdPlayers.nhl_id) is None:
+                nhl_player_id = self.find_single_player_nhl_id(fd_player.get(FdPlayers.full_name))
+                if nhl_player_id is not None:
+                    update_fd_player = database.entity(FdPlayers)
+                    update_fd_player.add_where(FdPlayers.id, fd_player.get(FdPlayers.id))
+                    update_fd_player = self.db_manager.select_single(update_fd_player)
+                    update_fd_player.set(FdPlayers.nhl_id, nhl_player_id)
+                    update_fd_player.add_where(FdPlayers.id, fd_player.get(FdPlayers.id))
+                    self.db_manager.update(update_fd_player, commit=False)
+        self.db_manager.commit()

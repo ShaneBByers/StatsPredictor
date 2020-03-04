@@ -52,7 +52,6 @@ class Logger:
 
     def setup_testing(self):
         self.add_console_handler()
-        self.add_email_handler()
 
 
 class BufferingSMTPHandler(BufferingHandler):
