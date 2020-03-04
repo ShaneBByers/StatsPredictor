@@ -16,15 +16,19 @@ class DataManagerFD:
         self.web_soup_manager = WebSoupManager(Constants.ROTOGRINDERS_URL)
 
     def current_day_functions(self):
-        self.logger.info("RUNNING CURRENT DAY FUNCTIONS FOR FD")
-        soup = self.web_soup_manager.get_soup()
+        try:
+            self.logger.info("RUNNING CURRENT DAY FUNCTIONS FOR FD")
+            soup = self.web_soup_manager.get_soup()
 
-        slate_id = self.get_soup_slate(soup)
-        if slate_id is not None:
-            self.logger.debug("Got SLATE with ID " + str(slate_id))
-            games_dict = self.get_soup_games(soup, slate_id)
-            self.get_soup_player_stats(games_dict)
-        self.db_manager.commit()
+            slate_id = self.get_soup_slate(soup)
+            if slate_id is not None:
+                self.logger.debug("Got SLATE with ID " + str(slate_id))
+                games_dict = self.get_soup_games(soup, slate_id)
+                self.get_soup_player_stats(games_dict)
+            self.db_manager.commit()
+        except Exception as e:
+            self.logger.exception("ERROR IN FD CURRENT DAY")
+            raise e
 
     def get_soup_slate(self, soup):
         self.logger.debug("Attempting to get SLATE")

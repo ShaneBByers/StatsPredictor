@@ -1,6 +1,8 @@
 import logging
+import Constants
 from datetime import date, datetime
 from database import database
+from EmailManager import EmailManager
 from pulp import LpProblem, LpAffineExpression, LpVariable, LpStatus, LpMaximize, PulpSolverError
 from Generated.DatabaseClasses import *
 
@@ -13,9 +15,13 @@ class DataManagerLP:
         self.db_manager = db_manager
 
     def current_day_functions(self):
-        self.logger.info("RUNNING CURRENT DAY FUNCTIONS FOR LP")
-        self.calculate_lineup()
-        self.db_manager.commit()
+        try:
+            self.logger.info("RUNNING CURRENT DAY FUNCTIONS FOR LP")
+            self.calculate_lineup()
+            self.db_manager.commit()
+        except Exception as e:
+            self.logger.exception("ERROR IN LP CURRENT DAY")
+            raise e
 
     def calculate_lineup(self):
         select_slate = database.entity(FdSlates)
@@ -32,10 +38,10 @@ class DataManagerLP:
             extend_list_select.add_where(FdPlayerStats.game_id, game.get(FdGames.id))
             extend_list = self.db_manager.select_all(extend_list_select)
             fd_player_stats.extend(extend_list)
-        self.logger.debug("Found " + str(len(fd_player_stats)) + "FD_PLAYER_STATS for consideration")
+        self.logger.debug("Found " + str(len(fd_player_stats)) + " FD_PLAYER_STATS for consideration")
         selection_dict, pred_score_dict = self.get_dicts_from_player_stats(fd_player_stats)
         problem_status, problem_variables = self.solve_lp_problem(selection_dict)
-        self.insert_lp_data(slate, problem_status, problem_variables, pred_score_dict)
+        self.handle_lp_data(slate, problem_status, problem_variables, pred_score_dict)
 
     def get_dicts_from_player_stats(self, fd_player_stats):
         self.logger.debug("Attempting to get selection and pred score dictionaries for all player stats.")
@@ -103,11 +109,12 @@ class DataManagerLP:
 
         return problem.status, problem.variables()
 
-    def insert_lp_data(self, slate, problem_status, problem_variables, pred_score_dict):
+    def handle_lp_data(self, slate, problem_status, problem_variables, pred_score_dict):
         self.logger.info("Attempting to insert new LP data results to DB")
         insert_lp_players = []
         total_salary = 0
         total_points = 0.0
+        email_content = ""
         for lp_variable in problem_variables:
             if lp_variable.varValue > 0:
                 select_fd_player = database.entity(FdPlayers)
@@ -122,18 +129,36 @@ class DataManagerLP:
                 insert_lp_player.set(LpPlayers.salary, fd_player_stats.get(FdPlayerStats.salary))
                 insert_lp_player.set(LpPlayers.fd_score, pred_score_dict[int(lp_variable.name)])
                 insert_lp_players.append(insert_lp_player)
-                self.logger.info(str(fd_player.get(FdPlayers.full_name)) +
-                                  " POSITION: " +
-                                  fd_player_stats.get(FdPlayerStats.position) +
-                                  " SALARY: $" +
-                                  str(fd_player_stats.get(FdPlayerStats.salary)) +
-                                  " SCORE: " +
-                                  str(pred_score_dict[int(lp_variable.name)]))
+                player_string = str(fd_player.get(FdPlayers.full_name))
+                player_string += " POSITION: "
+                player_string += fd_player_stats.get(FdPlayerStats.position)
+                player_string += " SALARY: $"
+                player_string += str(fd_player_stats.get(FdPlayerStats.salary))
+                player_string += " SCORE: "
+                player_string += str(pred_score_dict[int(lp_variable.name)])
+                email_content += player_string + "\n"
+                self.logger.info(player_string)
                 total_salary += fd_player_stats.get(FdPlayerStats.salary)
                 total_points += pred_score_dict[int(lp_variable.name)]
 
-        self.logger.info("TOTAL SALARY: $" + str(total_salary))
-        self.logger.info("TOTAL POINTS: " + str(total_points))
+        total_salary_string = "TOTAL SALARY: $" + str(total_salary)
+        total_points_string = "TOTAL POINTS: " + str(total_points)
+        email_content += "\n\n"
+        email_content += total_salary_string
+        email_content += total_points_string
+        self.logger.info(total_salary_string)
+        self.logger.info(total_points_string)
+
+        try:
+            email_manager = EmailManager(Constants.LOGGING_EMAIL_HOST,
+                                         Constants.LOGGING_EMAIL_USERNAME,
+                                         Constants.LOGGING_EMAIL_PASSWORD,
+                                         Constants.LOGGING_FROM_EMAIL)
+            email_manager.send_email(Constants.LOGGING_TO_EMAIL,
+                                     "LINEUP PREDICTION",
+                                     email_content)
+        except TimeoutError:
+            self.logger.error("Timeout error while sending LP result email")
 
         insert_lp_lineup = database.entity(LpLineup)
         insert_lp_lineup.set(LpLineup.slate_id, slate.get(FdSlates.id))

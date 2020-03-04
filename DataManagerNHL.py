@@ -18,42 +18,46 @@ class DataManagerNHL:
         self.modifier = Modifier(self.db_manager)
 
     def current_day_functions(self):
-        self.logger.info("RUNNING CURRENT DAY FUNCTIONS FOR NHL")
-        team_stats_select = database.entity(TeamStats)
-        team_stats_select.add_order_by(TeamStats.game_id, False)
-        team_stats = self.db_manager.select_single(team_stats_select)
-        if team_stats is not None:
-            self.logger.debug("Got TEAM_STATS with GAME_ID: " + str(team_stats.get(TeamStats.game_id)))
-            last_game_id = team_stats.get(TeamStats.game_id)
-            last_game_select = database.entity(Games)
-            last_game_select.add_where(Games.id, last_game_id)
-            last_game_select.add_where(Games.is_home, True)
-            last_game = self.db_manager.select_single(last_game_select)
-            last_date = last_game.get(Games.date_time).date()
-            self.logger.debug("Using last date as " + str(last_date))
-        else:
-            self.logger.debug("No TEAM_STATS selected. Using last date as minimum date.")
-            last_date = date.min
-        season_select = database.entity(Seasons)
-        season_select.add_where(Seasons.is_current, True)
-        season = self.db_manager.select_single(season_select)
-        self.logger.debug("Got SEASON with ID: " + str(season.get(Seasons.id)))
-        season_games_select = database.entity(Games)
-        season_games_select.add_where(Games.season_id, season.get(Seasons.id))
-        season_games_select.add_where(Games.is_home, True)
-        season_games = self.db_manager.select_all(season_games_select)
-        self.logger.debug("Got " + str(len(season_games)) + " GAMES.")
-        today = date.today()
-        games_filter = filter(lambda x: last_date < x.get(Games.date_time).date() < today, season_games)
-        selected_games = list(games_filter)
-        self.logger.debug("Filtered to " + str(len(selected_games)) + " games between " + str(last_date) + " and today.")
-        if len(selected_games) > 0:
-            self.insert_team_stats(games=selected_games)
-            self.insert_player_stats(games=selected_games,
-                                     is_goalie=False)
-            self.insert_player_stats(games=selected_games,
-                                     is_goalie=True)
-        self.db_manager.commit()
+        try:
+            self.logger.info("RUNNING CURRENT DAY FUNCTIONS FOR NHL")
+            team_stats_select = database.entity(TeamStats)
+            team_stats_select.add_order_by(TeamStats.game_id, False)
+            team_stats = self.db_manager.select_single(team_stats_select)
+            if team_stats is not None:
+                self.logger.debug("Got TEAM_STATS with GAME_ID: " + str(team_stats.get(TeamStats.game_id)))
+                last_game_id = team_stats.get(TeamStats.game_id)
+                last_game_select = database.entity(Games)
+                last_game_select.add_where(Games.id, last_game_id)
+                last_game_select.add_where(Games.is_home, True)
+                last_game = self.db_manager.select_single(last_game_select)
+                last_date = last_game.get(Games.date_time).date()
+                self.logger.debug("Using last date as " + str(last_date))
+            else:
+                self.logger.debug("No TEAM_STATS selected. Using last date as minimum date.")
+                last_date = date.min
+            season_select = database.entity(Seasons)
+            season_select.add_where(Seasons.is_current, True)
+            season = self.db_manager.select_single(season_select)
+            self.logger.debug("Got SEASON with ID: " + str(season.get(Seasons.id)))
+            season_games_select = database.entity(Games)
+            season_games_select.add_where(Games.season_id, season.get(Seasons.id))
+            season_games_select.add_where(Games.is_home, True)
+            season_games = self.db_manager.select_all(season_games_select)
+            self.logger.debug("Got " + str(len(season_games)) + " GAMES.")
+            today = date.today()
+            games_filter = filter(lambda x: last_date < x.get(Games.date_time).date() < today, season_games)
+            selected_games = list(games_filter)
+            self.logger.debug("Filtered to " + str(len(selected_games)) + " games between " + str(last_date) + " and today.")
+            if len(selected_games) > 0:
+                self.insert_team_stats(games=selected_games)
+                self.insert_player_stats(games=selected_games,
+                                         is_goalie=False)
+                self.insert_player_stats(games=selected_games,
+                                         is_goalie=True)
+            self.db_manager.commit()
+        except Exception as e:
+            self.logger.exception("ERROR IN NHL CURRENT DAY")
+            raise e
 
     def insert_teams(self):
         self.logger.debug("Attempting to get TEAMS values from web.")

@@ -12,9 +12,13 @@ class DataManagerPRED:
         self.db_manager = db_manager
 
     def current_day_functions(self):
-        self.logger.info("RUNNING CURRENT DAY FUNCTIONS FOR PRED")
-        self.get_pred_player_stats()
-        self.db_manager.commit()
+        try:
+            self.logger.info("RUNNING CURRENT DAY FUNCTIONS FOR PRED")
+            self.get_pred_player_stats()
+            self.db_manager.commit()
+        except Exception as e:
+            self.logger.exception("ERROR IN PRED CURRENT DAY")
+            raise e
 
     def get_pred_player_stats(self):
         select_season = database.entity(Seasons)
