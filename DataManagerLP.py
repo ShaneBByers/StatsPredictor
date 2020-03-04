@@ -39,9 +39,9 @@ class DataManagerLP:
             extend_list = self.db_manager.select_all(extend_list_select)
             fd_player_stats.extend(extend_list)
         self.logger.debug("Found " + str(len(fd_player_stats)) + " FD_PLAYER_STATS for consideration")
-        selection_dict, pred_score_dict = self.get_dicts_from_player_stats(fd_player_stats)
+        selection_dict, player_details_dict = self.get_dicts_from_player_stats(fd_player_stats)
         problem_status, problem_variables = self.solve_lp_problem(selection_dict)
-        self.handle_lp_data(slate, problem_status, problem_variables, pred_score_dict)
+        self.handle_lp_data(slate, problem_status, problem_variables, player_details_dict)
 
     def get_dicts_from_player_stats(self, fd_player_stats):
         self.logger.debug("Attempting to get selection and pred score dictionaries for all player stats.")
@@ -49,7 +49,7 @@ class DataManagerLP:
                           'W': [],
                           'D': [],
                           'G': []}
-        pred_score_dict = {}
+        player_details_dict = {}
         for fd_player_stat in fd_player_stats:
             select_fd_player = database.entity(FdPlayers)
             select_fd_player.add_where(FdPlayers.id, fd_player_stat.get(FdPlayerStats.player_id))
@@ -70,13 +70,14 @@ class DataManagerLP:
                 nhl_id = fd_player.get(FdPlayers.nhl_id)
                 if inner_dict not in selection_dict[position]:
                     self.logger.debug("Creating dictionaries for NHL_PLAYER with ID " + str(nhl_id))
-                    pred_score_dict[nhl_id] = player_goalie_pred_stat.get(pred_stat_table.fd_score)
+                    player_details_dict[nhl_id] = {"PRED_SCORE": player_goalie_pred_stat.get(pred_stat_table.fd_score),
+                                               "FD_GAME_ID": fd_player_stat.get(FdPlayerStats.game_id)}
                     selection_dict[position].append(inner_dict)
                 else:
                     self.logger.warning("NHL_PLAYER with ID " +
                                         str(nhl_id) +
                                         " exists on multiple teams. Prediction could be wrong.")
-        return selection_dict, pred_score_dict
+        return selection_dict, player_details_dict
 
     def solve_lp_problem(self, selection_dict):
         self.logger.info("Attempting to solve LP problem")
@@ -109,7 +110,7 @@ class DataManagerLP:
 
         return problem.status, problem.variables()
 
-    def handle_lp_data(self, slate, problem_status, problem_variables, pred_score_dict):
+    def handle_lp_data(self, slate, problem_status, problem_variables, player_details_dict):
         self.logger.info("Attempting to insert new LP data results to DB")
         insert_lp_players = []
         total_salary = 0
@@ -122,12 +123,14 @@ class DataManagerLP:
                 fd_player = self.db_manager.select_single(select_fd_player)
                 select_fd_player_stats = database.entity(FdPlayerStats)
                 select_fd_player_stats.add_where(FdPlayerStats.player_id, fd_player.get(FdPlayers.id))
+                select_fd_player_stats.add_where(FdPlayerStats.game_id,
+                                                 player_details_dict[int(lp_variable.name)]["FD_GAME_ID"])
                 fd_player_stats = self.db_manager.select_single(select_fd_player_stats)
                 insert_lp_player = database.entity(LpPlayers)
                 insert_lp_player.set(LpPlayers.nhl_id, int(lp_variable.name))
                 insert_lp_player.set(LpPlayers.position, fd_player_stats.get(FdPlayerStats.position))
                 insert_lp_player.set(LpPlayers.salary, fd_player_stats.get(FdPlayerStats.salary))
-                insert_lp_player.set(LpPlayers.fd_score, pred_score_dict[int(lp_variable.name)])
+                insert_lp_player.set(LpPlayers.fd_score, player_details_dict[int(lp_variable.name)]["PRED_SCORE"])
                 insert_lp_players.append(insert_lp_player)
                 player_string = str(fd_player.get(FdPlayers.full_name))
                 player_string += " POSITION: "
@@ -135,16 +138,16 @@ class DataManagerLP:
                 player_string += " SALARY: $"
                 player_string += str(fd_player_stats.get(FdPlayerStats.salary))
                 player_string += " SCORE: "
-                player_string += str(pred_score_dict[int(lp_variable.name)])
+                player_string += str(player_details_dict[int(lp_variable.name)]["PRED_SCORE"])
                 email_content += player_string + "\n"
                 self.logger.info(player_string)
                 total_salary += fd_player_stats.get(FdPlayerStats.salary)
-                total_points += pred_score_dict[int(lp_variable.name)]
+                total_points += player_details_dict[int(lp_variable.name)]["PRED_SCORE"]
 
         total_salary_string = "TOTAL SALARY: $" + str(total_salary)
         total_points_string = "TOTAL POINTS: " + str(total_points)
         email_content += "\n\n"
-        email_content += total_salary_string
+        email_content += total_salary_string + "\n\n"
         email_content += total_points_string
         self.logger.info(total_salary_string)
         self.logger.info(total_points_string)
