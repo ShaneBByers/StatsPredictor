@@ -37,7 +37,7 @@ class DataManagerPRED:
         start_date_time = last_completed_game.get(Games.date_time)
         start_date_time = start_date_time.combine(start_date_time.date(), datetime.max.time())
         end_date_time = datetime.today()
-        end_date_time = end_date_time.combine(end_date_time.date(), datetime.min.time())
+        end_date_time = end_date_time.combine(end_date_time.date(), datetime.max.time())
         self.logger.info("Selecting games between " +
                          str(start_date_time) +
                          " and " +
