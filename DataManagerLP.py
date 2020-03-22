@@ -19,6 +19,9 @@ class DataManagerLP:
             self.logger.info("RUNNING CURRENT DAY FUNCTIONS FOR LP")
             self.logger.info("Getting yesterday's perfect lineup")
             self.calculate_lineup(actual=True)
+            self.db_manager.commit()
+            self.logger.info("Setting up LP input data")
+            self.setup_lp_input()
             self.logger.info("Getting today's predicted lineup")
             self.calculate_lineup(actual=False)
             self.db_manager.commit()
@@ -181,6 +184,17 @@ class DataManagerLP:
         email_content += "\n\n"
         email_content += total_salary_string + "\n\n"
         email_content += total_points_string
+        if actual:
+            self.logger.debug("Getting max predicted points from yesterday for SLATE with ID" +
+                              str(slate.get(FdSlates.id)))
+            yesterday_pred_points_select = database.entity(LpLineup)
+            yesterday_pred_points_select.add_where(LpLineup.slate_id, slate.get(FdSlates.id))
+            yesterday_pred_points_select.add_where(LpLineup.is_actual, False)
+            yesterday_pred_points_select.add_order_by(LpLineup.total_points, False)
+            yesterday_pred_points = self.db_manager.select_single(yesterday_pred_points_select)
+            yesterday_points = yesterday_pred_points.get(LpLineup.total_points)
+            yesterday_pred_points_string = "YESTERDAY PREDICTED POINTS: " + str(yesterday_points)
+            email_content += "\n\n" + yesterday_pred_points_string
         self.logger.info(total_salary_string)
         self.logger.info(total_points_string)
 
@@ -235,10 +249,10 @@ class DataManagerLP:
             self.logger.debug("Found player with FD SCORE of " + str(score))
             return score
         else:
-            self.logger.warning("Could not find yesterday's PLAYER STATS for GAME with ID " +
-                                str(nhl_game_id) +
-                                " and PLAYER with ID " +
-                                str(nhl_player_id))
+            self.logger.info("Could not find yesterday's PLAYER STATS for GAME with ID " +
+                             str(nhl_game_id) +
+                             " and PLAYER with ID " +
+                             str(nhl_player_id))
             return None
 
     def get_actual_goalie_fd_score(self, nhl_game_id, nhl_goalie_id):

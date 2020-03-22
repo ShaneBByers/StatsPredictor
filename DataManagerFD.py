@@ -79,17 +79,18 @@ class DataManagerFD:
                 fd_away_team = self.get_fd_team_id(away_team_abbr)
                 fd_game_id = int(li['data-schedule-id'])
                 nhl_game_id = self.get_nhl_game_id(fd_home_team.get(FdTeams.nhl_id))
-                fd_game_insert = database.entity(FdGames)
-                fd_game_insert.set(FdGames.id, fd_game_id)
-                fd_game_insert.set(FdGames.slate_id, slate_id)
-                fd_game_insert.set(FdGames.home_id, fd_home_team.get(FdTeams.id))
-                fd_game_insert.set(FdGames.away_id, fd_away_team.get(FdTeams.id))
-                fd_game_insert.set(FdGames.nhl_game_id, nhl_game_id)
-                self.db_manager.insert(fd_game_insert, commit=False)
-                game = {'GAME_SOUP': li,
-                        'HOME_ID': fd_home_team.get(FdTeams.id),
-                        'AWAY_ID': fd_away_team.get(FdTeams.id)}
-                game_soups_dict[fd_game_id] = game
+                if nhl_game_id is not None:
+                    fd_game_insert = database.entity(FdGames)
+                    fd_game_insert.set(FdGames.id, fd_game_id)
+                    fd_game_insert.set(FdGames.slate_id, slate_id)
+                    fd_game_insert.set(FdGames.home_id, fd_home_team.get(FdTeams.id))
+                    fd_game_insert.set(FdGames.away_id, fd_away_team.get(FdTeams.id))
+                    fd_game_insert.set(FdGames.nhl_game_id, nhl_game_id)
+                    self.db_manager.insert(fd_game_insert, commit=False)
+                    game = {'GAME_SOUP': li,
+                            'HOME_ID': fd_home_team.get(FdTeams.id),
+                            'AWAY_ID': fd_away_team.get(FdTeams.id)}
+                    game_soups_dict[fd_game_id] = game
         return game_soups_dict
 
     def get_fd_team_id(self, team_abbr):
@@ -128,8 +129,17 @@ class DataManagerFD:
         nhl_game_select.add_where(Games.team_id, home_nhl_id)
         nhl_game_select.add_where(Games.is_home, True)
         nhl_game = self.db_manager.select_single(nhl_game_select)
-        self.logger.info("Found NHL_GAME with ID " + str(nhl_game.get(Games.id)))
-        return nhl_game.get(Games.id)
+        if nhl_game is None:
+            self.logger.warning("No NHL_GAME found between " +
+                                str(min_date_time) +
+                                " and " +
+                                str(max_date_time) +
+                                " for TEAM with ID " +
+                                str(home_nhl_id))
+            return None
+        else:
+            self.logger.info("Found NHL_GAME with ID " + str(nhl_game.get(Games.id)))
+            return nhl_game.get(Games.id)
 
     def get_soup_player_stats(self, games_dict):
         for game_id, game in games_dict.items():
@@ -200,7 +210,7 @@ class DataManagerFD:
                         insert_fd_player_stats.set(FdPlayerStats.salary, salary)
                         self.db_manager.insert(insert_fd_player_stats, commit=False)
                     else:
-                        self.logger.warning("Invalid salary value for player FD_PLAYER with ID " + str(fd_player_id))
+                        self.logger.info("Invalid salary value for player FD_PLAYER with ID " + str(fd_player_id))
                 else:
                     self.logger.warning("DB already contains FD_PLAYER_STATS for player with ID " + str(fd_player_id))
 
