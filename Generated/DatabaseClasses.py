@@ -235,11 +235,11 @@ class GoalieStats(Enum):
     decision = 'DECISION'
 
 
-class LpInput(Enum):
+class LpInputs(Enum):
 
     @classmethod
     def table_name(cls):
-        return 'LP_INPUT'
+        return 'LP_INPUTS'
 
     @classmethod
     def auto_increments(cls):
@@ -251,16 +251,18 @@ class LpInput(Enum):
 
     slate_id = 'SLATE_ID'
     nhl_player_id = 'NHL_PLAYER_ID'
+    nhl_game_id = 'NHL_GAME_ID'
     fd_position = 'FD_POSITION'
-    fd_score = 'FD_SCORE'
+    pred_fd_score = 'PRED_FD_SCORE'
+    act_fd_score = 'ACT_FD_SCORE'
     fd_salary = 'FD_SALARY'
 
 
-class LpLineup(Enum):
+class LpLineups(Enum):
 
     @classmethod
     def table_name(cls):
-        return 'LP_LINEUP'
+        return 'LP_LINEUPS'
 
     @classmethod
     def auto_increments(cls):
@@ -276,14 +278,16 @@ class LpLineup(Enum):
     total_points = 'TOTAL_POINTS'
     total_salary = 'TOTAL_SALARY'
     is_actual = 'IS_ACTUAL'
+    is_perfect = 'IS_PERFECT'
+    user_modified = 'USER_MODIFIED'
     date_time = 'DATE_TIME'
 
 
-class LpPlayers(Enum):
+class LpLineupPlayers(Enum):
 
     @classmethod
     def table_name(cls):
-        return 'LP_PLAYERS'
+        return 'LP_LINEUP_PLAYERS'
 
     @classmethod
     def auto_increments(cls):
@@ -557,9 +561,9 @@ DB_TABLES = {'CONFERENCES': Conferences,
              'GAMES': Games,
              'GOALIE_PRED_STATS': GoaliePredStats,
              'GOALIE_STATS': GoalieStats,
-             'LP_INPUT': LpInput,
-             'LP_LINEUP': LpLineup,
-             'LP_PLAYERS': LpPlayers,
+             'LP_INPUTS': LpInputs,
+             'LP_LINEUPS': LpLineups,
+             'LP_LINEUP_PLAYERS': LpLineupPlayers,
              'PLAYERS': Players,
              'PLAYER_PRED_STATS': PlayerPredStats,
              'PLAYER_STATS': PlayerStats,
