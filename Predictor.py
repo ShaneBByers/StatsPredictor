@@ -5,4 +5,4 @@ logger = Logger()
 logger.setup_local()
 
 manager = DataManager()
-manager.current_day_functions()
+manager.manager_nhl.full_season("20052006")

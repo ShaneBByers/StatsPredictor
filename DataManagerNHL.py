@@ -63,19 +63,19 @@ class DataManagerNHL:
         self.logger.debug("Attempting to get TEAMS values from web.")
         insert_values = self.get_web_values("TEAMS")
         self.logger.info("Successfully got " + str(len(insert_values)) + " TEAMS values from web.")
-        self.db_manager.insert(insert_values)
+        self.db_manager.insert(insert_values, commit=False)
 
     def insert_players(self):
         self.logger.debug("Attempting to get PLAYERS values from web.")
         insert_values = self.get_web_values("PLAYERS")
         self.logger.info("Successfully got " + str(len(insert_values)) + " PLAYERS values from web.")
-        self.db_manager.insert(insert_values)
+        self.db_manager.insert(insert_values, commit=False)
 
     def insert_seasons(self):
         self.logger.debug("Attempting to get SEASONS values from web.")
         insert_values = self.get_web_values("SEASONS")
         self.logger.info("Successfully got " + str(len(insert_values)) + " SEASONS values from web.")
-        self.db_manager.insert(insert_values)
+        self.db_manager.insert(insert_values, commit=False)
 
     def insert_games(self, current_season=True, season_id=None):
         season_select = database.entity(Seasons)
@@ -108,7 +108,7 @@ class DataManagerNHL:
         for remove_game in remove_games:
             insert_values.remove(remove_game)
         self.logger.debug("Inserting " + str(len(insert_values)) + "GAMES into DB.")
-        self.db_manager.insert(insert_values)
+        self.db_manager.insert(insert_values, commit=False)
 
     def insert_team_stats(self, current_season=True, season_id=None, games=None):
         if games is None:
@@ -227,10 +227,11 @@ class DataManagerNHL:
             self.logger.debug("New game start time of " + str(game_start))
             game.set(Games.date_time, game_start)
             game.add_where(Games.id, game.get(Games.id))
-        self.db_manager.update(games)
+        self.db_manager.update(games, commit=False)
 
     def full_season(self, season_id):
-        self.logger.info("Attempting to log all information from the entire season for SEASON with ID" + str(season_id))
+        self.logger.info("Attempting to log all information from the entire season for SEASON with ID " +
+                         str(season_id))
         self.logger.info("Inserting all games for season")
         self.insert_games(current_season=False,
                           season_id=season_id)
