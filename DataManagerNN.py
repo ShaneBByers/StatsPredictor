@@ -39,6 +39,7 @@ class DataManagerNN:
                 return
 
         select_games = database.entity(Games)
+        select_games.add_where(Games.is_home, True)
         games = self.db_manager.select_all(select_games)
         self.logger.debug("Got " +
                           str(len(games)) +
