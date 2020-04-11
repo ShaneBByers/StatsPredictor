@@ -38,13 +38,23 @@ class DataManagerNN:
                 self.logger.error("Param methods in DB do not match methods in DataManagerNN")
                 return
 
-        select_player_stats = database.entity(PlayerStats)
-        all_player_stats = self.db_manager.select_all(select_player_stats)
+        select_games = database.entity(Games)
+        games = self.db_manager.select_all(select_games)
         self.logger.debug("Got " +
-                          str(len(all_player_stats)) +
-                          " PLAYER_STATS to consider.")
-        for single_player_stats in all_player_stats:
-            self.insert_player_inputs_for_player_stats(single_player_stats, player_params)
+                          str(len(games)) +
+                          " GAMES to consider")
+
+        for game in games:
+            select_player_stats = database.entity(PlayerStats)
+            select_player_stats.add_where(PlayerStats.game_id, game.get(Games.id))
+            single_game_all_player_stats = self.db_manager.select_all(select_player_stats)
+            self.logger.debug("Got " +
+                              str(len(single_game_all_player_stats)) +
+                              " PLAYER_STATS for GAME with ID " +
+                              str(game.get(Games.id)) +
+                              " to consider")
+            for single_player_stats in single_game_all_player_stats:
+                self.insert_player_inputs_for_player_stats(single_player_stats, player_params)
         self.db_manager.commit()
 
     def insert_player_inputs_for_player_stats(self, player_stats, player_params):
