@@ -304,6 +304,46 @@ class LpLineupPlayers(Enum):
     fd_score = 'FD_SCORE'
 
 
+class NnPlayerInputs(Enum):
+
+    @classmethod
+    def table_name(cls):
+        return 'NN_PLAYER_INPUTS'
+
+    @classmethod
+    def auto_increments(cls):
+        return []
+
+    @classmethod
+    def not_nulls(cls):
+        return ['GAME_ID', 'PLAYER_ID', 'PARAM_ID']
+
+    game_id = 'GAME_ID'
+    player_id = 'PLAYER_ID'
+    param_id = 'PARAM_ID'
+    input_value = 'INPUT_VALUE'
+
+
+class NnPlayerParams(Enum):
+
+    @classmethod
+    def table_name(cls):
+        return 'NN_PLAYER_PARAMS'
+
+    @classmethod
+    def auto_increments(cls):
+        return []
+
+    @classmethod
+    def not_nulls(cls):
+        return ['ID', 'IS_DONE']
+
+    id = 'ID'
+    method_name = 'METHOD_NAME'
+    method_descr = 'METHOD_DESCR'
+    is_done = 'IS_DONE'
+
+
 class Players(Enum):
 
     @classmethod
@@ -564,6 +604,8 @@ DB_TABLES = {'CONFERENCES': Conferences,
              'LP_INPUTS': LpInputs,
              'LP_LINEUPS': LpLineups,
              'LP_LINEUP_PLAYERS': LpLineupPlayers,
+             'NN_PLAYER_INPUTS': NnPlayerInputs,
+             'NN_PLAYER_PARAMS': NnPlayerParams,
              'PLAYERS': Players,
              'PLAYER_PRED_STATS': PlayerPredStats,
              'PLAYER_STATS': PlayerStats,
