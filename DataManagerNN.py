@@ -1,4 +1,5 @@
 import logging
+import pickle
 from database import database
 from Generated.DatabaseClasses import *
 
@@ -18,6 +19,42 @@ class DataManagerNN:
                             self.avg_shg_this_season,
                             self.avg_sha_this_season,
                             self.avg_blocked_this_season]
+
+    def train_network(self):
+        pickle_file = open('NN_Inputs.pkl', 'wb+')
+
+        input_array = []
+        select_games = database.entity(Games)
+        select_games.add_where(Games.is_home, True)
+        games = self.db_manager.select_all(select_games)
+        for game in games:
+            select_player_stats = database.entity(PlayerStats)
+            select_player_stats.add_where(PlayerStats.game_id, game.get(Games.id))
+            single_game_all_player_stats = self.db_manager.select_all(select_player_stats)
+            for single_player_stats in single_game_all_player_stats:
+                select_player_inputs = database.entity(NnPlayerInputs)
+                select_player_inputs.add_where(NnPlayerInputs.game_id, game.get(Games.id))
+                select_player_inputs.add_where(NnPlayerInputs.player_id, single_player_stats.get(PlayerStats.player_id))
+                player_inputs = self.db_manager.select_all(select_player_inputs)
+                player_input_array = []
+                for player_input in player_inputs:
+                    player_input_array.append(player_input.get(NnPlayerInputs.input_value))
+                blocked = single_player_stats.get(PlayerStats.blocked)
+                if blocked is None:
+                    blocked = 0.0
+                player_output_array = [single_player_stats.get(PlayerStats.goals),
+                                       single_player_stats.get(PlayerStats.assists),
+                                       single_player_stats.get(PlayerStats.shots),
+                                       single_player_stats.get(PlayerStats.ppg),
+                                       single_player_stats.get(PlayerStats.ppa),
+                                       single_player_stats.get(PlayerStats.shg),
+                                       single_player_stats.get(PlayerStats.sha),
+                                       blocked]
+                input_array.append((player_input_array, player_output_array))
+
+        pickle.dump(input_array, pickle_file)
+        pickle_file.close()
+        self.logger.info("Player input array created.")
 
     def insert_player_inputs(self):
         self.logger.info("Inserting all player inputs")

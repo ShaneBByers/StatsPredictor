@@ -5,4 +5,4 @@ logger = Logger()
 logger.setup_local()
 
 manager = DataManager()
-manager.manager_nn.insert_player_inputs()
+manager.manager_nn.train_network()
