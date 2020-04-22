@@ -1,6 +1,10 @@
 import logging
 import pickle
+import random
+import Constants
+import numpy as np
 from database import database
+from network import Network
 from Generated.DatabaseClasses import *
 
 
@@ -10,176 +14,219 @@ class DataManagerNN:
         self.logger = logging.getLogger(__name__)
 
         self.db_manager = db_manager
+        self.sizes = []
+        self.num_layers = 0
+        self.biases = np.empty(0)
+        self.weights = np.empty(0)
 
-        self.method_list = [self.avg_goals_this_season,
-                            self.avg_assists_this_season,
-                            self.avg_shots_this_season,
-                            self.avg_ppg_this_season,
-                            self.avg_ppa_this_season,
-                            self.avg_shg_this_season,
-                            self.avg_sha_this_season,
-                            self.avg_blocked_this_season]
+    def get_pickled_inputs(self):
+        self.logger.debug("Attempting to get inputs file")
+        pickle_file = open(Constants.NN_INPUTS_FILENAME, 'rb')
+        input_array = pickle.load(pickle_file)
+        pickle_file.close()
+        self.logger.info("Got inputs file")
+        return input_array
 
     def train_network(self):
-        pickle_file = open('NN_Inputs.pkl', 'wb+')
+        self.logger.debug("Attempting to train network")
+        input_array = self.get_pickled_inputs()
 
-        input_array = []
-        select_games = database.entity(Games)
-        select_games.add_where(Games.is_home, True)
-        games = self.db_manager.select_all(select_games)
-        for game in games:
-            select_player_stats = database.entity(PlayerStats)
-            select_player_stats.add_where(PlayerStats.game_id, game.get(Games.id))
-            single_game_all_player_stats = self.db_manager.select_all(select_player_stats)
-            for single_player_stats in single_game_all_player_stats:
-                select_player_inputs = database.entity(NnPlayerInputs)
-                select_player_inputs.add_where(NnPlayerInputs.game_id, game.get(Games.id))
-                select_player_inputs.add_where(NnPlayerInputs.player_id, single_player_stats.get(PlayerStats.player_id))
-                player_inputs = self.db_manager.select_all(select_player_inputs)
-                player_input_array = []
-                for player_input in player_inputs:
-                    player_input_array.append(player_input.get(NnPlayerInputs.input_value))
-                blocked = single_player_stats.get(PlayerStats.blocked)
-                if blocked is None:
-                    blocked = 0.0
-                player_output_array = [single_player_stats.get(PlayerStats.goals),
-                                       single_player_stats.get(PlayerStats.assists),
-                                       single_player_stats.get(PlayerStats.shots),
-                                       single_player_stats.get(PlayerStats.ppg),
-                                       single_player_stats.get(PlayerStats.ppa),
-                                       single_player_stats.get(PlayerStats.shg),
-                                       single_player_stats.get(PlayerStats.sha),
-                                       blocked]
-                input_array.append((player_input_array, player_output_array))
+        self.logger.debug("Reshaping input data")
+        input_data_inputs = [np.reshape(x[0], (8, 1)) for x in input_array]
+        input_data_results = [np.reshape(x[1], (8, 1)) for x in input_array]
 
-        pickle.dump(input_array, pickle_file)
-        pickle_file.close()
-        self.logger.info("Player input array created.")
+        total_size = len(input_data_inputs)
+        validation_size = int(total_size * 0.15)
+        testing_size = validation_size
+        combined_size = validation_size + testing_size
 
-    def insert_player_inputs(self):
-        self.logger.info("Inserting all player inputs")
-        select_player_params = database.entity(NnPlayerParams)
-        player_params = self.db_manager.select_all(select_player_params)
-        self.logger.debug("Found " +
-                          str(len(player_params)) +
-                          " PLAYER_PARAMS to consider")
-        for player_param in player_params:
-            method_index = player_param.get(NnPlayerParams.id) - 1
-            method = self.method_list[method_index]
-            db_method_name = player_param.get(NnPlayerParams.method_name)
-            self.logger.debug("Checking if PLAYER_PARAM with METHOD_INDEX " +
-                              str(method_index) +
-                              " is the method with METHOD_NAME " +
-                              db_method_name)
-            if method.__name__ != db_method_name:
-                self.logger.error("Param methods in DB do not match methods in DataManagerNN")
-                return
+        self.logger.debug("Creating training data with size: " +
+                          str(total_size - combined_size))
+        training_data = list(zip(input_data_inputs[:-combined_size],
+                                 input_data_results[:-combined_size]))
 
-        select_games = database.entity(Games)
-        select_games.add_where(Games.is_home, True)
-        games = self.db_manager.select_all(select_games)
-        self.logger.debug("Got " +
-                          str(len(games)) +
-                          " GAMES to consider")
+        self.logger.debug("Creating validation data with size: " +
+                          str(validation_size))
+        validation_data = list(zip(input_data_inputs[-combined_size:-testing_size],
+                                   input_data_results[-combined_size:-testing_size]))
 
-        for game in games:
-            select_player_stats = database.entity(PlayerStats)
-            select_player_stats.add_where(PlayerStats.game_id, game.get(Games.id))
-            single_game_all_player_stats = self.db_manager.select_all(select_player_stats)
-            self.logger.debug("Got " +
-                              str(len(single_game_all_player_stats)) +
-                              " PLAYER_STATS for GAME with ID " +
-                              str(game.get(Games.id)) +
-                              " to consider")
-            for single_player_stats in single_game_all_player_stats:
-                self.insert_player_inputs_for_player_stats(single_player_stats, player_params)
-        self.db_manager.commit()
+        self.logger.debug("Creating testing data with size: " +
+                          str(testing_size))
+        test_data = list(zip(input_data_inputs[-testing_size:], input_data_results[-testing_size:]))
 
-    def insert_player_inputs_for_player_stats(self, player_stats, player_params):
-        self.logger.info("Attempting to get PLAYER_INPUTS for PLAYER_STATS with GAME_ID " +
-                         str(player_stats.get(PlayerStats.player_id)) +
-                         " and PLAYER_ID " +
-                         str(player_stats.get(PlayerStats.game_id)))
-        for player_param in player_params:
-            if not player_param.get(NnPlayerParams.is_done):
-                insert_player_input = database.entity(NnPlayerInputs)
-                insert_player_input.set(NnPlayerInputs.game_id, player_stats.get(PlayerStats.game_id))
-                insert_player_input.set(NnPlayerInputs.player_id, player_stats.get(PlayerStats.player_id))
-                insert_player_input.set(NnPlayerInputs.param_id, player_param.get(NnPlayerParams.id))
-                method_index = player_param.get(NnPlayerParams.id) - 1
-                method = self.method_list[method_index]
-                input_value = method(player_stats)
-                insert_player_input.set(NnPlayerInputs.input_value, input_value)
-                self.db_manager.insert(insert_player_input, commit=False)
+        self.logger.info("Starting Network")
+        # net = Network([8, 20, 8])
+        # net.SGD(training_data, 30, 10, 3.0, test_data=test_data)
+        self.initialize_network([8, 20, 8])
+        self.sgd(training_data=training_data,
+                 epochs=30,
+                 mini_batch_size=10,
+                 learning_rate=0.1,
+                 lambda_val=0.0,
+                 evaluation_data=validation_data,
+                 monitor_training_cost=True,
+                 monitor_training_accuracy=True,
+                 monitor_evaluation_cost=True,
+                 monitor_evaluation_accuracy=True)
+        return
 
-    def avg_amt_this_season(self, player_stats, player_stats_var):
-        all_prev_player_stats = self.get_prev_player_stats(player_stats)
-        total_amt = 0.0
-        for single_stats in all_prev_player_stats:
-            single_amt = single_stats.get(player_stats_var)
-            if single_amt is not None:
-                total_amt += single_amt
-        if len(all_prev_player_stats) > 0:
-            avg_amt = total_amt / len(all_prev_player_stats)
+    def initialize_network(self, sizes):
+        self.sizes = sizes
+        self.num_layers = len(sizes)
+        self.biases = [np.random.randn(y, 1) for y in self.sizes[1:]]
+        self.weights = [np.random.randn(y, x)/np.sqrt(x)
+                        for x, y in zip(self.sizes[:-1], self.sizes[1:])]
+
+    def feed_forward(self, activation):
+        for bias, weight in zip(self.biases, self.weights):
+            activation = self.sigmoid(np.dot(weight, activation) + bias)
+        return activation
+
+    def total_cost(self, data, lambda_val):
+        cost = 0.0
+        for x, y in data:
+            a = self.feed_forward(x)
+            # temp_cost = 0.5*np.linalg.norm(a-y)**2
+            temp_cost = np.sum(np.nan_to_num(-y * np.log(a) - (1 - y) * np.log(1 - a)))
+            cost += temp_cost/len(data)
+        cost += 0.5*(lambda_val/len(data))*sum(np.linalg.norm(w)**2 for w in self.weights)
+        return cost
+
+    def accuracy(self, data):
+        # if convert:
+        #     results = [(np.argmax(self.feedforward(x)), np.argmax(y))
+        #                for (x, y) in data]
+        # else:
+        #     results = [(np.argmax(self.feedforward(x)), y)
+        #                for (x, y) in data]
+        # return sum(int(x==y) for (x, y) in results)
+        eval_results = []
+        for test_data in data:
+            eval_results.append((self.feed_forward(test_data[0]), test_data[1]))
+        correct_results = 0
+        points_arr = [12, 8, 1.6, 0.5, 0.5, 2, 2, 1.6]
+        for eval_in, eval_out in eval_results:
+            in_total = 0.0
+            out_total = 0.0
+            for i in range(len(eval_in)):
+                in_total += eval_in[i] * points_arr[i]
+                out_total += eval_out[i] * points_arr[i]
+            if abs(in_total - out_total) < 2:
+                correct_results += 1
+        return correct_results
+
+    def back_propagation(self, x, y):
+        bias_gradient = [np.zeros(b.shape) for b in self.biases]
+        weight_gradient = [np.zeros(w.shape) for w in self.weights]
+        activation = x
+        activations = [x]
+        zs = []
+        for b, w in zip(self.biases, self.weights):
+            z = np.dot(w, activation)+b
+            zs.append(z)
+            activation = self.sigmoid(z)
+            activations.append(activation)
+        delta = activations[-1] - y
+        # delta = (activations[-1] - y) * self.sigmoid_prime(zs[-1])
+        bias_gradient[-1] = delta
+        weight_gradient[-1] = np.dot(delta, activations[-2].transpose())
+        for l in range(2, self.num_layers):
+            z = zs[-l]
+            sp = self.sigmoid_prime(z)
+            delta = np.dot(self.weights[-l+1].transpose(), delta) * sp
+            bias_gradient[-l] = delta
+            weight_gradient[-l] = np.dot(delta, activations[-l-1].transpose())
+        return bias_gradient, weight_gradient
+
+    def update_mini_batch(self, mini_batch, learning_rate, lambda_val, n):
+        bias_gradient = [np.zeros(b.shape) for b in self.biases]
+        weight_gradient = [np.zeros(w.shape) for w in self.weights]
+        for x, y in mini_batch:
+            delta_bias_gradient, delta_weight_gradient = self.back_propagation(x, y)
+            bias_gradient = [bg+dbg for bg, dbg in zip(bias_gradient, delta_bias_gradient)]
+            weight_gradient = [wg+dwg for wg, dwg in zip(weight_gradient, delta_weight_gradient)]
+        self.weights = [(1-learning_rate*(lambda_val/n))*w-(learning_rate/len(mini_batch))*wg
+                        for w, wg in zip(self.weights, weight_gradient)]
+        self.biases = [b-(learning_rate/len(mini_batch))*bg
+                       for b, bg in zip(self.biases, bias_gradient)]
+
+    def sgd(self, training_data, epochs, mini_batch_size, learning_rate, lambda_val=0.0, evaluation_data=None,
+            monitor_training_cost=False,
+            monitor_training_accuracy=False,
+            monitor_evaluation_cost=False,
+            monitor_evaluation_accuracy=False):
+        self.logger.info("Attempting Stochastic Gradient Descent")
+        if evaluation_data:
+            eval_count = len(evaluation_data)
         else:
-            avg_amt = 0.0
-        return avg_amt
+            eval_count = 0
+        self.logger.debug("Evaluation data size: " + str(eval_count))
+        training_count = len(training_data)
+        self.logger.debug("Training data size: " + str(training_count))
+        evaluation_cost, evaluation_accuracy, training_cost, training_accuracy = [], [], [], []
+        self.logger.debug("Running for " +
+                          str(epochs) +
+                          " epochs with mini batch size of " +
+                          str(mini_batch_size))
+        for j in range(epochs):
+            self.logger.info("Beginning epoch #" + str(j))
+            random.shuffle(training_data)
+            mini_batches = [
+                training_data[k:k+mini_batch_size]
+                for k in range(0, training_count, mini_batch_size)]
+            for mini_batch in mini_batches:
+                self.update_mini_batch(
+                    mini_batch, learning_rate, lambda_val, len(training_data))
+            self.logger.info("Completed epoch #" + str(j))
+            if monitor_training_cost:
+                self.logger.debug("Calculating total cost of training data")
+                cost = self.total_cost(training_data, lambda_val)
+                training_cost.append(cost)
+                self.logger.info("Training Cost: " + str(cost))
+            if monitor_training_accuracy:
+                self.logger.debug("Calculating accuracy of training data")
+                accuracy = self.accuracy(training_data)
+                training_accuracy.append(accuracy)
+                percent = float(accuracy)/float(training_count)
+                percent *= 100
+                self.logger.info("Training Accuracy: " +
+                                 str(accuracy) +
+                                 " / " +
+                                 str(training_count) +
+                                 " = " +
+                                 str(int(percent)) +
+                                 "%")
+            if monitor_evaluation_cost:
+                self.logger.debug("Calculating total cost of evaluation data")
+                cost = self.total_cost(evaluation_data, lambda_val)
+                evaluation_cost.append(cost)
+                self.logger.info("Evaluation Cost: " + str(cost))
+            if monitor_evaluation_accuracy:
+                self.logger.debug("Calculating accuracy of evaluation data")
+                accuracy = self.accuracy(evaluation_data)
+                evaluation_accuracy.append(accuracy)
+                percent = float(accuracy)/float(eval_count)
+                percent *= 100
+                self.logger.info("Evaluation Accuracy: " +
+                                 str(accuracy) +
+                                 " / " +
+                                 str(eval_count) +
+                                 " = " +
+                                 str(int(percent)) +
+                                 "%")
+            print()
+        return evaluation_cost, evaluation_accuracy, training_cost, training_accuracy
 
-    def avg_goals_this_season(self, player_stats):
-        self.logger.info("GETTING AVG_GOALS_THIS_SEASON")
-        avg_goals = self.avg_amt_this_season(player_stats, PlayerStats.goals)
-        return avg_goals
+    def sigmoid(self, z):
+        with np.errstate(all='raise'):
+            try:
+                # temp = np.array(z, dtype=np.float256)
+                return_val = 1.0/(1.0+np.exp(-z))
+            except RuntimeWarning as e:
+                self.logger.error("Runtime Warning in Sigmoid")
+                raise e
+            else:
+                return return_val
 
-    def avg_assists_this_season(self, player_stats):
-        self.logger.info("GETTING AVG_ASSISTS_THIS_SEASON")
-        avg_assists = self.avg_amt_this_season(player_stats, PlayerStats.assists)
-        return avg_assists
-
-    def avg_shots_this_season(self, player_stats):
-        self.logger.info("GETTING AVG_SHOTS_THIS_SEASON")
-        avg_shots = self.avg_amt_this_season(player_stats, PlayerStats.shots)
-        return avg_shots
-
-    def avg_ppg_this_season(self, player_stats):
-        self.logger.info("GETTING AVG_PPG_THIS_SEASON")
-        avg_ppg = self.avg_amt_this_season(player_stats, PlayerStats.ppg)
-        return avg_ppg
-
-    def avg_ppa_this_season(self, player_stats):
-        self.logger.info("GETTING AVG_PPA_THIS_SEASON")
-        avg_ppa = self.avg_amt_this_season(player_stats, PlayerStats.ppa)
-        return avg_ppa
-
-    def avg_shg_this_season(self, player_stats):
-        self.logger.info("GETTING AVG_SHG_THIS_SEASON")
-        avg_shg = self.avg_amt_this_season(player_stats, PlayerStats.shg)
-        return avg_shg
-
-    def avg_sha_this_season(self, player_stats):
-        self.logger.info("GETTING AVG_SHA_THIS_SEASON")
-        avg_sha = self.avg_amt_this_season(player_stats, PlayerStats.sha)
-        return avg_sha
-
-    def avg_blocked_this_season(self, player_stats):
-        self.logger.info("GETTING AVG_BLOCKED_THIS_SEASON")
-        avg_blocked = self.avg_amt_this_season(player_stats, PlayerStats.blocked)
-        return avg_blocked
-
-    def get_prev_player_stats(self, player_stats, reverse_order=True):
-        self.logger.debug("Getting previous player stats for season for GAME_ID " +
-                          str(player_stats.get(PlayerStats.game_id)) +
-                          " and PLAYER_ID " +
-                          str(player_stats.get(PlayerStats.player_id)))
-        game_id = player_stats.get(PlayerStats.game_id)
-        first_game_id = int(game_id / 1000000)
-        first_game_id = first_game_id * 1000000
-        select_prev_player_stats = database.entity(PlayerStats)
-        select_prev_player_stats.add_where(PlayerStats.player_id, player_stats.get(PlayerStats.player_id))
-        select_prev_player_stats.add_where(PlayerStats.game_id, first_game_id, ">=")
-        select_prev_player_stats.add_where(PlayerStats.game_id, player_stats.get(PlayerStats.game_id), "<")
-        select_prev_player_stats.add_order_by(PlayerStats.game_id, not reverse_order)
-        prev_player_stats = self.db_manager.select_all(select_prev_player_stats)
-        self.logger.debug("Got " +
-                          str(len(prev_player_stats)) +
-                          " previous PLAYER_STATS for this season to consider")
-        return prev_player_stats
+    def sigmoid_prime(self, z):
+        return self.sigmoid(z)*(1-self.sigmoid(z))

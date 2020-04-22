@@ -4,6 +4,7 @@ from DataManagerNHL import DataManagerNHL
 from DataManagerFD import DataManagerFD
 from DataManagerPRED import DataManagerPRED
 from DataManagerLP import DataManagerLP
+from DataManagerNNInputs import DataManagerNNInputs
 from DataManagerNN import DataManagerNN
 from database import database
 
@@ -35,6 +36,7 @@ class DataManager:
             self.manager_fd = DataManagerFD(self.db_manager)
             self.manager_pred = DataManagerPRED(self.db_manager)
             self.manager_lp = DataManagerLP(self.db_manager)
+            self.manager_nn_inputs = DataManagerNNInputs(self.db_manager)
             self.manager_nn = DataManagerNN(self.db_manager)
 
     def update_classes_file(self, file_name):

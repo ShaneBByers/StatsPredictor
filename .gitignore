@@ -2,3 +2,4 @@
 /Supporting/
 /*.log
 /NN_Inputs.pkl
+/network.py
