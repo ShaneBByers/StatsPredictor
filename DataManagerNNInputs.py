@@ -1,5 +1,6 @@
 import logging
 import pickle
+import Constants
 import numpy as np
 from database import database
 from network import Network
@@ -41,7 +42,7 @@ class DataManagerNNInputs:
     #     return input_array
 
     def pickle_inputs(self):
-        pickle_file = open('NN_Inputs.pkl', 'wb+')
+        pickle_file = open(Constants.NN_INPUTS_FILENAME, 'wb+')
 
         input_array = []
         select_games = database.entity(Games)
