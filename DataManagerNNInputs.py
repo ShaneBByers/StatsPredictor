@@ -43,6 +43,7 @@ class DataManagerNNInputs:
                 blocked = single_player_stats.get(PlayerStats.blocked)
                 if blocked is None:
                     blocked = 0.0
+                adjusted_blocked = blocked / 10.0
                 player_output_array = [single_player_stats.get(PlayerStats.goals),
                                        single_player_stats.get(PlayerStats.assists),
                                        single_player_stats.get(PlayerStats.shots) / 10.0,
@@ -50,7 +51,7 @@ class DataManagerNNInputs:
                                        single_player_stats.get(PlayerStats.ppa),
                                        single_player_stats.get(PlayerStats.shg),
                                        single_player_stats.get(PlayerStats.sha),
-                                       blocked]
+                                       adjusted_blocked]
                 input_array.append((player_input_array, player_output_array))
 
         pickle.dump(input_array, pickle_file)
@@ -139,7 +140,7 @@ class DataManagerNNInputs:
     def avg_shots_this_season(self, player_stats):
         self.logger.info("GETTING AVG_SHOTS_THIS_SEASON")
         avg_shots = self.avg_amt_this_season(player_stats, PlayerStats.shots)
-        adjusted_avg_shots = avg_shots / 10
+        adjusted_avg_shots = avg_shots / 10.0
         return adjusted_avg_shots
 
     def avg_ppg_this_season(self, player_stats):
@@ -165,7 +166,8 @@ class DataManagerNNInputs:
     def avg_blocked_this_season(self, player_stats):
         self.logger.info("GETTING AVG_BLOCKED_THIS_SEASON")
         avg_blocked = self.avg_amt_this_season(player_stats, PlayerStats.blocked)
-        return avg_blocked
+        adjusted_avg_blocked = avg_blocked / 10.0
+        return adjusted_avg_blocked
 
     def get_prev_player_stats(self, player_stats, reverse_order=True):
         self.logger.debug("Getting previous player stats for season for GAME_ID " +
