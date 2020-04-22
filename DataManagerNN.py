@@ -4,7 +4,6 @@ import random
 import Constants
 import numpy as np
 from database import database
-from network import Network
 from Generated.DatabaseClasses import *
 
 

@@ -1,9 +1,7 @@
 import logging
 import pickle
 import Constants
-import numpy as np
 from database import database
-from network import Network
 from Generated.DatabaseClasses import *
 
 
@@ -22,24 +20,6 @@ class DataManagerNNInputs:
                             self.avg_shg_this_season,
                             self.avg_sha_this_season,
                             self.avg_blocked_this_season]
-
-    # def train_network(self):
-    #     input_array = self.get_pickled_inputs()
-    #     input_data_inputs = [np.reshape(x[0], (8, 1)) for x in input_array]
-    #     input_data_results = [np.reshape(x[1], (8, 1)) for x in input_array]
-    #     training_data = list(zip(input_data_inputs[:-200000], input_data_results[:-200000]))
-    #     validation_data = list(zip(input_data_inputs[-200000:-100000], input_data_results[-200000:-100000]))
-    #     test_data = list(zip(input_data_inputs[-100000:], input_data_results[-100000:]))
-    #     self.logger.info("Starting Network")
-    #     net = Network([8, 20, 8])
-    #     net.SGD(training_data, 30, 10, 3.0, test_data=test_data)
-    #     return
-    #
-    # def get_pickled_inputs(self):
-    #     pickle_file = open('NN_Inputs.pkl', 'rb')
-    #     input_array = pickle.load(pickle_file)
-    #     pickle_file.close()
-    #     return input_array
 
     def pickle_inputs(self):
         pickle_file = open(Constants.NN_INPUTS_FILENAME, 'wb+')
