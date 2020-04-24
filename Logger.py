@@ -42,7 +42,7 @@ class Logger:
         self.log.addHandler(email_handler)
 
     def setup_local(self):
-        # self.add_console_handler()
+        self.add_console_handler()
         self.add_file_handler("WARNING.log", logging.WARNING)
 
     def setup_current_day(self):
