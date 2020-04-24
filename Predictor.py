@@ -5,5 +5,6 @@ logger = Logger()
 logger.setup_local()
 
 manager = DataManager()
-manager.manager_nn_inputs.pickle_inputs()
+# manager.manager_nn_inputs.pickle_inputs()
 # manager.manager_nn.train_network()
+manager.manager_pred.get_all_pred_player_stats()

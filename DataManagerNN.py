@@ -60,12 +60,12 @@ class DataManagerNN:
         self.sgd(training_data=training_data,
                  epochs=30,
                  mini_batch_size=10,
-                 learning_rate=0.1,
+                 learning_rate=1.0,
                  lambda_val=0.0,
                  evaluation_data=validation_data,
-                 monitor_training_cost=True,
-                 monitor_training_accuracy=True,
-                 monitor_evaluation_cost=True,
+                 monitor_training_cost=False,
+                 monitor_training_accuracy=False,
+                 monitor_evaluation_cost=False,
                  monitor_evaluation_accuracy=True)
         return
 
@@ -103,7 +103,7 @@ class DataManagerNN:
         for test_data in data:
             eval_results.append((self.feed_forward(test_data[0]), test_data[1]))
         correct_results = 0
-        points_arr = [12, 8, 1.6, 0.5, 0.5, 2, 2, 1.6]
+        points_arr = [12, 8, 1.6 * 10, 0.5, 0.5, 2, 2, 1.6 * 10]
         for eval_in, eval_out in eval_results:
             in_total = 0.0
             out_total = 0.0
@@ -213,7 +213,6 @@ class DataManagerNN:
                                  " = " +
                                  str(int(percent)) +
                                  "%")
-            print()
         return evaluation_cost, evaluation_accuracy, training_cost, training_accuracy
 
     def sigmoid(self, z):

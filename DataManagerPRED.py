@@ -20,6 +20,19 @@ class DataManagerPRED:
             self.logger.exception("ERROR IN PRED CURRENT DAY")
             raise e
 
+    def get_all_pred_player_stats(self):
+        select_seasons = database.entity(Seasons)
+        select_seasons.add_where(Seasons.id, 20050000, ">")
+        seasons = self.db_manager.select_all(select_seasons)
+        for season in seasons:
+            select_season_games = database.entity(Games)
+            select_season_games.add_where(Games.season_id, season.get(Seasons.id))
+            select_season_games.add_where(Games.is_home, True)
+            season_games = self.db_manager.select_all(select_season_games)
+            for season_game in season_games:
+                self.get_pred_player_stats_for_game(season, season_game)
+            self.db_manager.commit()
+
     def get_pred_player_stats(self):
         select_season = database.entity(Seasons)
         select_season.add_where(Seasons.is_current, True)
@@ -200,7 +213,10 @@ class DataManagerPRED:
             shg += game_player_stats.get(PlayerStats.shg)
             sha += game_player_stats.get(PlayerStats.sha)
             shots += game_player_stats.get(PlayerStats.shots)
-            blocked += game_player_stats.get(PlayerStats.blocked)
+            single_game_blocked = game_player_stats.get(PlayerStats.blocked)
+            if single_game_blocked is None:
+                single_game_blocked = 0
+            blocked += single_game_blocked
         count = len(player_stats_list)
         if count > 0:
             goals /= count
