@@ -33,6 +33,75 @@ class DataManagerPRED:
                 self.get_pred_player_stats_for_game(season, season_game)
             self.db_manager.commit()
 
+    def calculate_accuracy(self):
+        select_seasons = database.entity(Seasons)
+        select_seasons.add_where(Seasons.id, 20050000, ">")
+        seasons = self.db_manager.select_all(select_seasons)
+        tolerance_2_correct = 0
+        tolerance_5_correct = 0
+        tolerance_10_correct = 0
+        total_count = 0
+        for season in seasons:
+            select_season_games = database.entity(Games)
+            select_season_games.add_where(Games.season_id, season.get(Seasons.id))
+            select_season_games.add_where(Games.is_home, True)
+            season_games = self.db_manager.select_all(select_season_games)
+            for season_game in season_games:
+                self.logger.info("Checking GAME with ID " + str(season_game.get(Games.id)))
+                select_all_act_stats = database.entity(PlayerStats)
+                select_all_act_stats.add_where(PlayerStats.game_id, season_game.get(Games.id))
+                all_act_stats = self.db_manager.select_all(select_all_act_stats)
+                select_all_pred_stats = database.entity(PlayerPredStats)
+                select_all_pred_stats.add_where(PlayerPredStats.game_id, season_game.get(Games.id))
+                all_pred_stats = self.db_manager.select_all(select_all_pred_stats)
+                for single_act_stats in all_act_stats:
+                    for single_pred_stats in all_pred_stats:
+                        if single_act_stats.get(PlayerStats.player_id) == single_pred_stats.get(PlayerPredStats.player_id):
+                            act_score = 0.0
+                            act_score += single_act_stats.get(PlayerStats.goals) * 12
+                            act_score += single_act_stats.get(PlayerStats.assists) * 8
+                            act_score += single_act_stats.get(PlayerStats.ppg) * 0.5
+                            act_score += single_act_stats.get(PlayerStats.ppa) * 0.5
+                            act_score += single_act_stats.get(PlayerStats.shg) * 2
+                            act_score += single_act_stats.get(PlayerStats.sha) * 2
+                            act_score += single_act_stats.get(PlayerStats.shots) * 1.6
+                            blocked = single_act_stats.get(PlayerStats.blocked)
+                            if blocked is None:
+                                blocked = 0
+                            pred_score = 0.0
+                            pred_score += blocked * 1.6
+                            pred_score += single_pred_stats.get(PlayerPredStats.goals) * 12
+                            pred_score += single_pred_stats.get(PlayerPredStats.assists) * 8
+                            pred_score += single_pred_stats.get(PlayerPredStats.ppg) * 0.5
+                            pred_score += single_pred_stats.get(PlayerPredStats.ppa) * 0.5
+                            pred_score += single_pred_stats.get(PlayerPredStats.shg) * 2
+                            pred_score += single_pred_stats.get(PlayerPredStats.sha) * 2
+                            pred_score += single_pred_stats.get(PlayerPredStats.shots) * 1.6
+                            blocked = single_pred_stats.get(PlayerPredStats.blocked)
+                            if blocked is None:
+                                blocked = 0
+                            pred_score += blocked * 1.6
+                            total_count += 1
+                            if abs(act_score - pred_score) < 2:
+                                tolerance_2_correct += 1
+                            if abs(act_score - pred_score) < 5:
+                                tolerance_5_correct += 1
+                            if abs(act_score - pred_score) < 10:
+                                tolerance_10_correct += 1
+                self.logger.info("TOTAL: " + str(total_count))
+                self.logger.info("TOLERANCE 2 : " + str(tolerance_2_correct))
+                self.logger.info("TOLERANCE 5 : " + str(tolerance_5_correct))
+                self.logger.info("TOLERANCE 10: " + str(tolerance_10_correct))
+        tol_2_percent = (tolerance_2_correct / total_count) * 100
+        tol_5_percent = (tolerance_5_correct / total_count) * 100
+        tol_10_percent = (tolerance_10_correct / total_count) * 100
+        self.logger.info("------- END --------")
+        self.logger.info("TOTAL COUNT: " + str(total_count))
+        self.logger.info("TOLERANCE 2 : " + str(tol_2_percent))
+        self.logger.info("TOLERANCE 5 : " + str(tol_5_percent))
+        self.logger.info("TOLERANCE 10: " + str(tol_10_percent))
+
+
     def get_pred_player_stats(self):
         select_season = database.entity(Seasons)
         select_season.add_where(Seasons.is_current, True)
