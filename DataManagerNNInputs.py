@@ -1,6 +1,8 @@
 import logging
 import pickle
 import Constants
+import random
+import numpy as np
 from database import database
 from Generated.DatabaseClasses import *
 
@@ -52,9 +54,36 @@ class DataManagerNNInputs:
                                        single_player_stats.get(PlayerStats.shg),
                                        single_player_stats.get(PlayerStats.sha),
                                        adjusted_blocked]
-                input_array.append((player_input_array, player_output_array))
+                np_input = np.asarray(player_input_array)
+                np_output = np.asarray(player_output_array)
+                input_array.append((np_input, np_output))
 
-        pickle.dump(input_array, pickle_file)
+        random.seed(100)
+
+        random.shuffle(input_array)
+
+        total_size = len(input_array)
+        validation_size = int(total_size * 0.15)
+        testing_size = validation_size
+        combined_size = validation_size + testing_size
+
+        self.logger.debug("Creating training data with size: " +
+                          str(total_size - combined_size))
+        training_inputs = input_array[:-combined_size]
+
+        self.logger.debug("Creating validation data with size: " +
+                          str(validation_size))
+        validation_inputs = input_array[-combined_size:-testing_size]
+
+        self.logger.debug("Creating testing data with size: " +
+                          str(testing_size))
+        test_inputs = input_array[-testing_size:]
+
+        pickle_dict = {"TRAIN": training_inputs,
+                       "VALIDATE": validation_inputs,
+                       "TEST": test_inputs}
+
+        pickle.dump(pickle_dict, pickle_file)
         pickle_file.close()
         self.logger.info("Player input array created.")
 

@@ -110,7 +110,7 @@ class DataManagerNN:
             for i in range(len(eval_in)):
                 in_total += eval_in[i] * points_arr[i]
                 out_total += eval_out[i] * points_arr[i]
-            if abs(in_total - out_total) < 2:
+            if abs(in_total - out_total) < 5:
                 correct_results += 1
         return correct_results
 
