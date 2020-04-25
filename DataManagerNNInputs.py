@@ -54,9 +54,9 @@ class DataManagerNNInputs:
                                        single_player_stats.get(PlayerStats.shg),
                                        single_player_stats.get(PlayerStats.sha),
                                        adjusted_blocked]
-                np_input = np.asarray(player_input_array)
-                np_output = np.asarray(player_output_array)
-                input_array.append(zip(np_input, np_output))
+                # np_input = np.asarray(player_input_array)
+                # np_output = np.asarray(player_output_array)
+                input_array.append((player_input_array, player_output_array))
 
         random.seed(100)
 
@@ -79,11 +79,11 @@ class DataManagerNNInputs:
                           str(testing_size))
         test_inputs = input_array[-testing_size:]
 
-        # pickle_dict = {"TRAIN": training_inputs,
-        #                "VALIDATE": validation_inputs,
-        #                "TEST": test_inputs}
+        pickle_dict = {"TRAIN": training_inputs,
+                       "VALIDATE": validation_inputs,
+                       "TEST": test_inputs}
 
-        pickle.dump((training_inputs, validation_inputs, test_inputs), pickle_file)
+        pickle.dump(pickle_dict, pickle_file)
         pickle_file.close()
         self.logger.info("Player input array created.")
 
