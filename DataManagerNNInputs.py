@@ -23,6 +23,32 @@ class DataManagerNNInputs:
                             self.avg_sha_this_season,
                             self.avg_blocked_this_season]
 
+    def fix_server_pickle(self):
+        self.logger.info("Fixing server pickle file")
+        input_file = open("NN_Inputs_server.pkl", 'rb')
+        output_file = open(Constants.NN_INPUTS_FILENAME, 'wb+')
+
+        pickle_dict = pickle.load(input_file)
+
+        train_input = pickle_dict['TRAIN']
+        validate_input = pickle_dict['VALIDATE']
+        test_input = pickle_dict['TEST']
+
+        self.logger.info("Creating Numpy arrays")
+
+        train_output = [(np.reshape(x[0], (8, 1)), np.reshape(x[1], (8, 1))) for x in train_input]
+        validate_output = [(np.reshape(x[0], (8, 1)), np.reshape(x[1], (8, 1))) for x in validate_input]
+        test_output = [(np.reshape(x[0], (8, 1)), np.reshape(x[1], (8, 1))) for x in test_input]
+
+        output_dict = {'TRAIN': train_output,
+                       'VALIDATE': validate_output,
+                       'TEST': test_output}
+
+        self.logger.info("Pickling into file")
+
+        pickle.dump(output_dict, output_file)
+        output_file.close()
+
     def pickle_inputs(self):
         pickle_file = open(Constants.NN_INPUTS_FILENAME, 'wb+')
 

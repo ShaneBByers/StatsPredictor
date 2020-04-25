@@ -304,6 +304,31 @@ class LpLineupPlayers(Enum):
     fd_score = 'FD_SCORE'
 
 
+class NnPlayerHyperParams(Enum):
+
+    @classmethod
+    def table_name(cls):
+        return 'NN_PLAYER_HYPER_PARAMS'
+
+    @classmethod
+    def auto_increments(cls):
+        return ['ID']
+
+    @classmethod
+    def not_nulls(cls):
+        return []
+
+    id = 'ID'
+    learning_rate = 'LEARNING_RATE'
+    epochs = 'EPOCHS'
+    epochs_early_stop = 'EPOCHS_EARLY_STOP'
+    regularization = 'REGULARIZATION'
+    hidden_layer_size = 'HIDDEN_LAYER_SIZE'
+    mini_batch_size = 'MINI_BATCH_SIZE'
+    accuracy_tolerance = 'ACCURACY_TOLERANCE'
+    is_active = 'IS_ACTIVE'
+
+
 class NnPlayerInputs(Enum):
 
     @classmethod
@@ -342,6 +367,33 @@ class NnPlayerParams(Enum):
     method_name = 'METHOD_NAME'
     method_descr = 'METHOD_DESCR'
     is_done = 'IS_DONE'
+
+
+class NnPlayerResults(Enum):
+
+    @classmethod
+    def table_name(cls):
+        return 'NN_PLAYER_RESULTS'
+
+    @classmethod
+    def auto_increments(cls):
+        return []
+
+    @classmethod
+    def not_nulls(cls):
+        return ['HYPER_PARAMS_ID', 'EPOCH']
+
+    hyper_params_id = 'HYPER_PARAMS_ID'
+    epoch = 'EPOCH'
+    training_cost = 'TRAINING_COST'
+    training_correct = 'TRAINING_CORRECT'
+    training_total = 'TRAINING_TOTAL'
+    training_percent = 'TRAINING_PERCENT'
+    using_test_data = 'USING_TEST_DATA'
+    evaluation_cost = 'EVALUATION_COST'
+    evaluation_correct = 'EVALUATION_CORRECT'
+    evaluation_total = 'EVALUATION_TOTAL'
+    evaluation_percent = 'EVALUATION_PERCENT'
 
 
 class Players(Enum):
@@ -604,8 +656,10 @@ DB_TABLES = {'CONFERENCES': Conferences,
              'LP_INPUTS': LpInputs,
              'LP_LINEUPS': LpLineups,
              'LP_LINEUP_PLAYERS': LpLineupPlayers,
+             'NN_PLAYER_HYPER_PARAMS': NnPlayerHyperParams,
              'NN_PLAYER_INPUTS': NnPlayerInputs,
              'NN_PLAYER_PARAMS': NnPlayerParams,
+             'NN_PLAYER_RESULTS': NnPlayerResults,
              'PLAYERS': Players,
              'PLAYER_PRED_STATS': PlayerPredStats,
              'PLAYER_STATS': PlayerStats,

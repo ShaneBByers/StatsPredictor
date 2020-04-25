@@ -28,46 +28,64 @@ class DataManagerNN:
 
     def train_network(self):
         self.logger.debug("Attempting to train network")
-        input_array = self.get_pickled_inputs()
+        input_dict = self.get_pickled_inputs()
 
-        self.logger.debug("Reshaping input data")
-        input_data_inputs = [np.reshape(x[0], (8, 1)) for x in input_array]
-        input_data_results = [np.reshape(x[1], (8, 1)) for x in input_array]
+        training_data = input_dict['TRAIN']
+        validation_data = input_dict['VALIDATE']
+        test_data = input_dict['TEST']
 
-        total_size = len(input_data_inputs)
-        validation_size = int(total_size * 0.15)
-        testing_size = validation_size
-        combined_size = validation_size + testing_size
-
-        self.logger.debug("Creating training data with size: " +
-                          str(total_size - combined_size))
-        training_data = list(zip(input_data_inputs[:-combined_size],
-                                 input_data_results[:-combined_size]))
-
-        self.logger.debug("Creating validation data with size: " +
-                          str(validation_size))
-        validation_data = list(zip(input_data_inputs[-combined_size:-testing_size],
-                                   input_data_results[-combined_size:-testing_size]))
-
-        self.logger.debug("Creating testing data with size: " +
-                          str(testing_size))
-        test_data = list(zip(input_data_inputs[-testing_size:], input_data_results[-testing_size:]))
+        # self.logger.debug("Reshaping input data")
+        # input_data_inputs = [np.reshape(x[0], (8, 1)) for x in input_array]
+        # input_data_results = [np.reshape(x[1], (8, 1)) for x in input_array]
+        #
+        # total_size = len(input_data_inputs)
+        # validation_size = int(total_size * 0.15)
+        # testing_size = validation_size
+        # combined_size = validation_size + testing_size
+        #
+        # self.logger.debug("Creating training data with size: " +
+        #                   str(total_size - combined_size))
+        # training_data = list(zip(input_data_inputs[:-combined_size],
+        #                          input_data_results[:-combined_size]))
+        #
+        # self.logger.debug("Creating validation data with size: " +
+        #                   str(validation_size))
+        # validation_data = list(zip(input_data_inputs[-combined_size:-testing_size],
+        #                            input_data_results[-combined_size:-testing_size]))
+        #
+        # self.logger.debug("Creating testing data with size: " +
+        #                   str(testing_size))
+        # test_data = list(zip(input_data_inputs[-testing_size:], input_data_results[-testing_size:]))
 
         self.logger.info("Starting Network")
         # net = Network([8, 20, 8])
         # net.SGD(training_data, 30, 10, 3.0, test_data=test_data)
-        self.initialize_network([8, 20, 8])
-        self.sgd(training_data=training_data,
-                 epochs=30,
-                 mini_batch_size=10,
-                 learning_rate=1.0,
-                 lambda_val=0.0,
-                 evaluation_data=validation_data,
-                 monitor_training_cost=False,
-                 monitor_training_accuracy=False,
-                 monitor_evaluation_cost=False,
-                 monitor_evaluation_accuracy=True)
-        return
+        select_hyper_params = database.entity(NnPlayerHyperParams)
+        select_hyper_params.add_where(NnPlayerHyperParams.is_active, True)
+        all_hyper_params = self.db_manager.select_all(select_hyper_params)
+        for single_hyper_params in all_hyper_params:
+            input_size = len(training_data[0][0])
+            output_size = len(training_data[1][0])
+            hidden_layer_size = single_hyper_params.get(NnPlayerHyperParams.hidden_layer_size)
+            self.initialize_network([input_size, hidden_layer_size, output_size])
+
+            learning_rate = single_hyper_params.get(NnPlayerHyperParams.learning_rate)
+            epochs = single_hyper_params.get(NnPlayerHyperParams.epochs)
+            mini_batch_size = single_hyper_params.get(NnPlayerHyperParams.mini_batch_size)
+            regularization = single_hyper_params.get(NnPlayerHyperParams.regularization)
+            hyper_params_id = single_hyper_params.get(NnPlayerHyperParams.id)
+
+            self.sgd(training_data=training_data,
+                     epochs=epochs,
+                     mini_batch_size=mini_batch_size,
+                     learning_rate=learning_rate,
+                     lambda_val=regularization,
+                     evaluation_data=validation_data,
+                     hyper_params_id=hyper_params_id,
+                     monitor_training_cost=True,
+                     monitor_training_accuracy=True,
+                     monitor_evaluation_cost=True,
+                     monitor_evaluation_accuracy=True)
 
     def initialize_network(self, sizes):
         self.sizes = sizes
@@ -149,7 +167,8 @@ class DataManagerNN:
         self.biases = [b-(learning_rate/len(mini_batch))*bg
                        for b, bg in zip(self.biases, bias_gradient)]
 
-    def sgd(self, training_data, epochs, mini_batch_size, learning_rate, lambda_val=0.0, evaluation_data=None,
+    def sgd(self, training_data, epochs, mini_batch_size, learning_rate, hyper_params_id, lambda_val=0.0,
+            evaluation_data=None,
             monitor_training_cost=False,
             monitor_training_accuracy=False,
             monitor_evaluation_cost=False,
@@ -168,7 +187,7 @@ class DataManagerNN:
                           " epochs with mini batch size of " +
                           str(mini_batch_size))
         for j in range(epochs):
-            self.logger.info("Beginning epoch #" + str(j))
+            self.logger.info("Beginning epoch #" + str(j + 1))
             random.shuffle(training_data)
             mini_batches = [
                 training_data[k:k+mini_batch_size]
@@ -176,12 +195,17 @@ class DataManagerNN:
             for mini_batch in mini_batches:
                 self.update_mini_batch(
                     mini_batch, learning_rate, lambda_val, len(training_data))
-            self.logger.info("Completed epoch #" + str(j))
+            self.logger.info("Completed epoch #" + str(j + 1))
+            insert_results = database.entity(NnPlayerResults)
+            insert_results.set(NnPlayerResults.hyper_params_id, hyper_params_id)
+            insert_results.set(NnPlayerResults.epoch, j + 1)
+            insert_results.set(NnPlayerResults.using_test_data, False)
             if monitor_training_cost:
                 self.logger.debug("Calculating total cost of training data")
                 cost = self.total_cost(training_data, lambda_val)
                 training_cost.append(cost)
                 self.logger.info("Training Cost: " + str(cost))
+                insert_results.set(NnPlayerResults.training_cost, cost)
             if monitor_training_accuracy:
                 self.logger.debug("Calculating accuracy of training data")
                 accuracy = self.accuracy(training_data)
@@ -195,11 +219,15 @@ class DataManagerNN:
                                  " = " +
                                  str(int(percent)) +
                                  "%")
+                insert_results.set(NnPlayerResults.training_correct, accuracy)
+                insert_results.set(NnPlayerResults.training_total, training_count)
+                insert_results.set(NnPlayerResults.training_percent, percent)
             if monitor_evaluation_cost:
                 self.logger.debug("Calculating total cost of evaluation data")
                 cost = self.total_cost(evaluation_data, lambda_val)
                 evaluation_cost.append(cost)
                 self.logger.info("Evaluation Cost: " + str(cost))
+                insert_results.set(NnPlayerResults.evaluation_cost, cost)
             if monitor_evaluation_accuracy:
                 self.logger.debug("Calculating accuracy of evaluation data")
                 accuracy = self.accuracy(evaluation_data)
@@ -213,6 +241,10 @@ class DataManagerNN:
                                  " = " +
                                  str(int(percent)) +
                                  "%")
+                insert_results.set(NnPlayerResults.evaluation_correct, accuracy)
+                insert_results.set(NnPlayerResults.evaluation_total, eval_count)
+                insert_results.set(NnPlayerResults.evaluation_percent, percent)
+            self.db_manager.insert(insert_results)
         return evaluation_cost, evaluation_accuracy, training_cost, training_accuracy
 
     def sigmoid(self, z):
