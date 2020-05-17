@@ -67,7 +67,11 @@ class DataManagerNN:
             input_size = len(training_data[0][0])
             output_size = len(training_data[1][0])
             hidden_layer_size = single_hyper_params.get(NnPlayerHyperParams.hidden_layer_size)
-            self.initialize_network([input_size, hidden_layer_size, output_size])
+            if hidden_layer_size is None:
+                network_layout = [input_size, output_size]
+            else:
+                network_layout = [input_size, hidden_layer_size, output_size]
+            self.initialize_network(network_layout)
 
             learning_rate = single_hyper_params.get(NnPlayerHyperParams.learning_rate)
             epochs = single_hyper_params.get(NnPlayerHyperParams.epochs)
@@ -82,9 +86,9 @@ class DataManagerNN:
                      lambda_val=regularization,
                      evaluation_data=validation_data,
                      hyper_params_id=hyper_params_id,
-                     monitor_training_cost=True,
-                     monitor_training_accuracy=True,
-                     monitor_evaluation_cost=True,
+                     monitor_training_cost=False,
+                     monitor_training_accuracy=False,
+                     monitor_evaluation_cost=False,
                      monitor_evaluation_accuracy=True)
 
     def initialize_network(self, sizes):
