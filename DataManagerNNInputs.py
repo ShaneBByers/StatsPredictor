@@ -54,6 +54,7 @@ class DataManagerNNInputs:
         pickle_file = open(Constants.NN_INPUTS_FILENAME, 'wb+')
 
         input_array = []
+        output_array = []
         select_games = database.entity(Games)
         select_games.add_where(Games.is_home, True)
         games = self.db_manager.select_all(select_games)
@@ -70,15 +71,21 @@ class DataManagerNNInputs:
                 player_input_array = []
                 for player_input in player_inputs:
                     player_input_array.append(player_input.get(NnPlayerInputs.input_value))
-                player_output_array = [single_player_stats.get(PlayerStats.goals),
-                                       single_player_stats.get(PlayerStats.assists),
-                                       single_player_stats.get(PlayerStats.shots),
-                                       single_player_stats.get(PlayerStats.ppg),
-                                       single_player_stats.get(PlayerStats.ppa),
-                                       single_player_stats.get(PlayerStats.shg),
-                                       single_player_stats.get(PlayerStats.sha),
-                                       single_player_stats.get(PlayerStats.blocked)]
-                input_array.append((player_input_array, player_output_array))
+                input_array.append(player_input_array)
+                blocked = single_player_stats.get(PlayerStats.blocked)
+                if blocked is None:
+                    blocked = 0
+                output_array.append([single_player_stats.get(PlayerStats.goals),
+                                     single_player_stats.get(PlayerStats.assists),
+                                     single_player_stats.get(PlayerStats.shots),
+                                     single_player_stats.get(PlayerStats.ppg),
+                                     single_player_stats.get(PlayerStats.ppa),
+                                     single_player_stats.get(PlayerStats.shg),
+                                     single_player_stats.get(PlayerStats.sha),
+                                     blocked])
+                # input_array.append((player_input_array, player_output_array))
+
+        pickle_tuple = (input_array, output_array)
 
         # random.seed(100)
         #
@@ -105,7 +112,7 @@ class DataManagerNNInputs:
         #                "VALIDATE": validation_inputs,
         #                "TEST": test_inputs}
 
-        pickle.dump(input_array, pickle_file)
+        pickle.dump(pickle_tuple, pickle_file)
         pickle_file.close()
         self.logger.info("Player input array created.")
 
