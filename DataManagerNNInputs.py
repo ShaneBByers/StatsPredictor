@@ -65,52 +65,47 @@ class DataManagerNNInputs:
                 select_player_inputs = database.entity(NnPlayerInputs)
                 select_player_inputs.add_where(NnPlayerInputs.game_id, game.get(Games.id))
                 select_player_inputs.add_where(NnPlayerInputs.player_id, single_player_stats.get(PlayerStats.player_id))
+                select_player_inputs.add_order_by(NnPlayerInputs.param_id)
                 player_inputs = self.db_manager.select_all(select_player_inputs)
                 player_input_array = []
                 for player_input in player_inputs:
                     player_input_array.append(player_input.get(NnPlayerInputs.input_value))
-                blocked = single_player_stats.get(PlayerStats.blocked)
-                if blocked is None:
-                    blocked = 0.0
-                adjusted_blocked = blocked / 10.0
                 player_output_array = [single_player_stats.get(PlayerStats.goals),
                                        single_player_stats.get(PlayerStats.assists),
-                                       single_player_stats.get(PlayerStats.shots) / 10.0,
+                                       single_player_stats.get(PlayerStats.shots),
                                        single_player_stats.get(PlayerStats.ppg),
                                        single_player_stats.get(PlayerStats.ppa),
                                        single_player_stats.get(PlayerStats.shg),
                                        single_player_stats.get(PlayerStats.sha),
-                                       adjusted_blocked]
-                # np_input = np.asarray(player_input_array)
-                # np_output = np.asarray(player_output_array)
+                                       single_player_stats.get(PlayerStats.blocked)]
                 input_array.append((player_input_array, player_output_array))
 
-        random.seed(100)
+        # random.seed(100)
+        #
+        # random.shuffle(input_array)
+        #
+        # total_size = len(input_array)
+        # validation_size = int(total_size * 0.15)
+        # testing_size = validation_size
+        # combined_size = validation_size + testing_size
+        #
+        # self.logger.debug("Creating training data with size: " +
+        #                   str(total_size - combined_size))
+        # training_inputs = input_array[:-combined_size]
+        #
+        # self.logger.debug("Creating validation data with size: " +
+        #                   str(validation_size))
+        # validation_inputs = input_array[-combined_size:-testing_size]
+        #
+        # self.logger.debug("Creating testing data with size: " +
+        #                   str(testing_size))
+        # test_inputs = input_array[-testing_size:]
+        #
+        # pickle_dict = {"TRAIN": training_inputs,
+        #                "VALIDATE": validation_inputs,
+        #                "TEST": test_inputs}
 
-        random.shuffle(input_array)
-
-        total_size = len(input_array)
-        validation_size = int(total_size * 0.15)
-        testing_size = validation_size
-        combined_size = validation_size + testing_size
-
-        self.logger.debug("Creating training data with size: " +
-                          str(total_size - combined_size))
-        training_inputs = input_array[:-combined_size]
-
-        self.logger.debug("Creating validation data with size: " +
-                          str(validation_size))
-        validation_inputs = input_array[-combined_size:-testing_size]
-
-        self.logger.debug("Creating testing data with size: " +
-                          str(testing_size))
-        test_inputs = input_array[-testing_size:]
-
-        pickle_dict = {"TRAIN": training_inputs,
-                       "VALIDATE": validation_inputs,
-                       "TEST": test_inputs}
-
-        pickle.dump(pickle_dict, pickle_file)
+        pickle.dump(input_array, pickle_file)
         pickle_file.close()
         self.logger.info("Player input array created.")
 
