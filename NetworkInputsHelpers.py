@@ -8,6 +8,8 @@ class NetworkInputsHelpers:
     def __init__(self, db_manager):
         self.logger = logging.getLogger(__name__)
         self.db_manager = db_manager
+        self.current_player_stats = None
+        self.prev_stats_list = None
 
         self.method_list = []
 
@@ -44,7 +46,12 @@ class NetworkInputsHelpers:
         return prev_player_stats
 
     def get_specific_player_stat_from_games_ago(self, player_stats, specific_stat, games_ago):
-        all_prev_stats = self.get_prev_player_stats(player_stats)
+        if player_stats == self.current_player_stats:
+            all_prev_stats = self.prev_stats_list
+        else:
+            all_prev_stats = self.get_prev_player_stats(player_stats)
+            self.current_player_stats = player_stats
+            self.prev_stats_list = all_prev_stats
         if len(all_prev_stats) >= games_ago:
             return all_prev_stats[games_ago-1].get(specific_stat)
         else:

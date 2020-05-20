@@ -42,9 +42,8 @@ class Logger:
         self.log.addHandler(email_handler)
 
     def setup_local(self):
-        return
-        # self.add_console_handler()
-        # self.add_file_handler("WARNING.log", logging.WARNING)
+        self.add_console_handler()
+        self.add_file_handler("WARNING.log", logging.WARNING)
 
     def setup_current_day(self):
         self.add_file_handler("DEBUG.log", logging.DEBUG)
