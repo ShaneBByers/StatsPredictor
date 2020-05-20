@@ -37,12 +37,14 @@ class NetworkInputsMethods:
 
         select_games = database.entity(Games)
         select_games.add_where(Games.is_home, True)
+        select_games.add_order_by(Games.id)
         games = self.db_manager.select_all(select_games)
         self.logger.debug("Got " +
                           str(len(games)) +
                           " GAMES to consider")
 
         for game in games:
+            self.logger.warning("GAME: " + str(game.get(Games.id)))
             select_player_stats = database.entity(PlayerStats)
             select_player_stats.add_where(PlayerStats.game_id, game.get(Games.id))
             single_game_all_player_stats = self.db_manager.select_all(select_player_stats)
@@ -51,8 +53,9 @@ class NetworkInputsMethods:
                               " PLAYER_STATS for GAME with ID " +
                               str(game.get(Games.id)) +
                               " to consider")
+            all_insert_values = []
             for single_player_stats in single_game_all_player_stats:
-                self.insert_player_inputs_for_player_stats(single_player_stats, player_params)
+                all_insert_values.extend(self.insert_player_inputs_for_player_stats(single_player_stats, player_params))
         self.db_manager.commit()
 
     def insert_player_inputs_for_player_stats(self, player_stats, player_params):
@@ -60,6 +63,7 @@ class NetworkInputsMethods:
                           str(player_stats.get(PlayerStats.game_id)) +
                           " and PLAYER_ID " +
                           str(player_stats.get(PlayerStats.player_id)))
+        insert_values = []
         for player_param in player_params:
             if not player_param.get(NnPlayerParams.is_done) and player_param.get(NnPlayerParams.id) <= 88:
                 insert_player_input = database.entity(NnPlayerInputs)
@@ -70,7 +74,9 @@ class NetworkInputsMethods:
                 method = self.method_list[method_index]
                 input_value = method(player_stats)
                 insert_player_input.set(NnPlayerInputs.input_value, input_value)
-                self.db_manager.insert(insert_player_input, commit=False)
+                insert_values.append(insert_player_input)
+                # self.db_manager.insert(insert_player_input, commit=False)
+        return insert_values
 
     def avg_goals_this_season(self, player_stats):
         self.logger.info("GETTING AVG_GOALS_THIS_SEASON")

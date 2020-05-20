@@ -19,7 +19,7 @@ class Logger:
 
     def add_console_handler(self):
         console_handler = logging.StreamHandler()
-        console_handler.setLevel(logging.DEBUG)
+        console_handler.setLevel(logging.WARNING)
         console_handler.setFormatter(self.simple_format)
         self.log.addHandler(console_handler)
 
@@ -43,7 +43,7 @@ class Logger:
 
     def setup_local(self):
         self.add_console_handler()
-        self.add_file_handler("WARNING.log", logging.WARNING)
+        # self.add_file_handler("WARNING.log", logging.WARNING)
 
     def setup_current_day(self):
         self.add_file_handler("DEBUG.log", logging.DEBUG)

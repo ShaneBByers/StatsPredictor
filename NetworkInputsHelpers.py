@@ -8,8 +8,8 @@ class NetworkInputsHelpers:
     def __init__(self, db_manager):
         self.logger = logging.getLogger(__name__)
         self.db_manager = db_manager
-        self.current_player_stats = None
-        self.prev_stats_list = None
+        self.current_season = None
+        self.player_dict = {}
 
         self.method_list = []
 
@@ -46,13 +46,30 @@ class NetworkInputsHelpers:
         return prev_player_stats
 
     def get_specific_player_stat_from_games_ago(self, player_stats, specific_stat, games_ago):
-        if player_stats == self.current_player_stats:
-            all_prev_stats = self.prev_stats_list
-        else:
-            all_prev_stats = self.get_prev_player_stats(player_stats)
-            self.current_player_stats = player_stats
-            self.prev_stats_list = all_prev_stats
-        if len(all_prev_stats) >= games_ago:
-            return all_prev_stats[games_ago-1].get(specific_stat)
-        else:
+        player_stats_season = int(player_stats.get(PlayerStats.game_id) / 1000000)
+        if player_stats_season != self.current_season:
+            self.current_season = player_stats_season
+            self.player_dict = {}
+        player_id = player_stats.get(PlayerStats.player_id)
+        if player_id not in self.player_dict:
+            self.player_dict[player_id] = [player_stats]
             return 0.0
+        else:
+            return_value = 0.0
+            if len(self.player_dict[player_id]) >= games_ago:
+                return_value = self.player_dict[player_id][games_ago-1].get(specific_stat)
+            if self.player_dict[player_id][0] != player_stats:
+                self.player_dict[player_id].insert(0, player_stats)
+                if len(self.player_dict[player_id]) > 10:
+                    self.player_dict[player_id].pop()
+            return return_value
+        # if player_stats == self.current_player_stats:
+        #     all_prev_stats = self.prev_stats_list
+        # else:
+        #     all_prev_stats = self.get_prev_player_stats(player_stats)
+        #     self.current_player_stats = player_stats
+        #     self.prev_stats_list = all_prev_stats
+        # if len(all_prev_stats) >= games_ago:
+        #     return all_prev_stats[games_ago-1].get(specific_stat)
+        # else:
+        #     return 0.0
