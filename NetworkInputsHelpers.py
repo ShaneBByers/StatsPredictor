@@ -42,3 +42,10 @@ class NetworkInputsHelpers:
                           str(len(prev_player_stats)) +
                           " previous PLAYER_STATS for this season to consider")
         return prev_player_stats
+
+    def get_specific_player_stat_from_games_ago(self, player_stats, specific_stat, games_ago):
+        all_prev_stats = self.get_prev_player_stats(player_stats)
+        if len(all_prev_stats) >= games_ago:
+            return all_prev_stats[games_ago-1].get(specific_stat)
+        else:
+            return 0.0

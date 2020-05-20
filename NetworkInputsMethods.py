@@ -61,7 +61,7 @@ class NetworkInputsMethods:
                           " and PLAYER_ID " +
                           str(player_stats.get(PlayerStats.player_id)))
         for player_param in player_params:
-            if not player_param.get(NnPlayerParams.is_done) and player_param.get(NnPlayerParams.id) <= 8:
+            if not player_param.get(NnPlayerParams.is_done) and player_param.get(NnPlayerParams.id) <= 88:
                 insert_player_input = database.entity(NnPlayerInputs)
                 insert_player_input.set(NnPlayerInputs.game_id, player_stats.get(PlayerStats.game_id))
                 insert_player_input.set(NnPlayerInputs.player_id, player_stats.get(PlayerStats.player_id))
@@ -113,244 +113,354 @@ class NetworkInputsMethods:
         return avg_blocked
 
     def goals_1_game_ago(self, player_stats):
-        return
+        self.logger.info("GETTING GOALS_1_GAME_AGO")
+        return self.helpers.get_specific_player_stat_from_games_ago(player_stats, PlayerStats.goals, 1)
 
     def goals_2_games_ago(self, player_stats):
-        return
+        self.logger.info("GETTING GOALS_2_GAME_AGO")
+        return self.helpers.get_specific_player_stat_from_games_ago(player_stats, PlayerStats.goals, 2)
 
     def goals_3_games_ago(self, player_stats):
-        return
+        self.logger.info("GETTING GOALS_3_GAME_AGO")
+        return self.helpers.get_specific_player_stat_from_games_ago(player_stats, PlayerStats.goals, 3)
 
     def goals_4_games_ago(self, player_stats):
-        return
+        self.logger.info("GETTING GOALS_4_GAME_AGO")
+        return self.helpers.get_specific_player_stat_from_games_ago(player_stats, PlayerStats.goals, 4)
 
     def goals_5_games_ago(self, player_stats):
-        return
+        self.logger.info("GETTING GOALS_5_GAME_AGO")
+        return self.helpers.get_specific_player_stat_from_games_ago(player_stats, PlayerStats.goals, 5)
 
     def goals_6_games_ago(self, player_stats):
-        return
+        self.logger.info("GETTING GOALS_6_GAME_AGO")
+        return self.helpers.get_specific_player_stat_from_games_ago(player_stats, PlayerStats.goals, 6)
 
     def goals_7_games_ago(self, player_stats):
-        return
+        self.logger.info("GETTING GOALS_7_GAME_AGO")
+        return self.helpers.get_specific_player_stat_from_games_ago(player_stats, PlayerStats.goals, 7)
 
     def goals_8_games_ago(self, player_stats):
-        return
+        self.logger.info("GETTING GOALS_8_GAME_AGO")
+        return self.helpers.get_specific_player_stat_from_games_ago(player_stats, PlayerStats.goals, 8)
 
     def goals_9_games_ago(self, player_stats):
-        return
+        self.logger.info("GETTING GOALS_9_GAME_AGO")
+        return self.helpers.get_specific_player_stat_from_games_ago(player_stats, PlayerStats.goals, 9)
 
     def goals_10_games_ago(self, player_stats):
-        return
+        self.logger.info("GETTING GOALS_10_GAME_AGO")
+        return self.helpers.get_specific_player_stat_from_games_ago(player_stats, PlayerStats.goals, 10)
 
     def assists_1_game_ago(self, player_stats):
-        return
+        self.logger.info("GETTING ASSISTS_1_GAME_AGO")
+        return self.helpers.get_specific_player_stat_from_games_ago(player_stats, PlayerStats.assists, 1)
 
     def assists_2_games_ago(self, player_stats):
-        return
+        self.logger.info("GETTING ASSISTS_2_GAME_AGO")
+        return self.helpers.get_specific_player_stat_from_games_ago(player_stats, PlayerStats.assists, 2)
 
     def assists_3_games_ago(self, player_stats):
-        return
+        self.logger.info("GETTING ASSISTS_3_GAME_AGO")
+        return self.helpers.get_specific_player_stat_from_games_ago(player_stats, PlayerStats.assists, 3)
 
     def assists_4_games_ago(self, player_stats):
-        return
+        self.logger.info("GETTING ASSISTS_4_GAME_AGO")
+        return self.helpers.get_specific_player_stat_from_games_ago(player_stats, PlayerStats.assists, 4)
 
     def assists_5_games_ago(self, player_stats):
-        return
+        self.logger.info("GETTING ASSISTS_5_GAME_AGO")
+        return self.helpers.get_specific_player_stat_from_games_ago(player_stats, PlayerStats.assists, 5)
 
     def assists_6_games_ago(self, player_stats):
-        return
+        self.logger.info("GETTING ASSISTS_6_GAME_AGO")
+        return self.helpers.get_specific_player_stat_from_games_ago(player_stats, PlayerStats.assists, 6)
 
     def assists_7_games_ago(self, player_stats):
-        return
+        self.logger.info("GETTING ASSISTS_7_GAME_AGO")
+        return self.helpers.get_specific_player_stat_from_games_ago(player_stats, PlayerStats.assists, 7)
 
     def assists_8_games_ago(self, player_stats):
-        return
+        self.logger.info("GETTING ASSISTS_8_GAME_AGO")
+        return self.helpers.get_specific_player_stat_from_games_ago(player_stats, PlayerStats.assists, 8)
 
     def assists_9_games_ago(self, player_stats):
-        return
+        self.logger.info("GETTING ASSISTS_9_GAME_AGO")
+        return self.helpers.get_specific_player_stat_from_games_ago(player_stats, PlayerStats.assists, 9)
 
     def assists_10_games_ago(self, player_stats):
-        return
+        self.logger.info("GETTING ASSISTS_10_GAME_AGO")
+        return self.helpers.get_specific_player_stat_from_games_ago(player_stats, PlayerStats.assists, 10)
 
     def shots_1_game_ago(self, player_stats):
-        return
+        self.logger.info("GETTING SHOTS_1_GAME_AGO")
+        return self.helpers.get_specific_player_stat_from_games_ago(player_stats, PlayerStats.shots, 1)
 
     def shots_2_games_ago(self, player_stats):
-        return
+        self.logger.info("GETTING SHOTS_2_GAME_AGO")
+        return self.helpers.get_specific_player_stat_from_games_ago(player_stats, PlayerStats.shots, 2)
 
     def shots_3_games_ago(self, player_stats):
-        return
+        self.logger.info("GETTING SHOTS_3_GAME_AGO")
+        return self.helpers.get_specific_player_stat_from_games_ago(player_stats, PlayerStats.shots, 3)
 
     def shots_4_games_ago(self, player_stats):
-        return
+        self.logger.info("GETTING SHOTS_4_GAME_AGO")
+        return self.helpers.get_specific_player_stat_from_games_ago(player_stats, PlayerStats.shots, 4)
 
     def shots_5_games_ago(self, player_stats):
-        return
+        self.logger.info("GETTING SHOTS_5_GAME_AGO")
+        return self.helpers.get_specific_player_stat_from_games_ago(player_stats, PlayerStats.shots, 5)
 
     def shots_6_games_ago(self, player_stats):
-        return
+        self.logger.info("GETTING SHOTS_6_GAME_AGO")
+        return self.helpers.get_specific_player_stat_from_games_ago(player_stats, PlayerStats.shots, 6)
 
     def shots_7_games_ago(self, player_stats):
-        return
+        self.logger.info("GETTING SHOTS_7_GAME_AGO")
+        return self.helpers.get_specific_player_stat_from_games_ago(player_stats, PlayerStats.shots, 7)
 
     def shots_8_games_ago(self, player_stats):
-        return
+        self.logger.info("GETTING SHOTS_8_GAME_AGO")
+        return self.helpers.get_specific_player_stat_from_games_ago(player_stats, PlayerStats.shots, 8)
 
     def shots_9_games_ago(self, player_stats):
-        return
+        self.logger.info("GETTING SHOTS_9_GAME_AGO")
+        return self.helpers.get_specific_player_stat_from_games_ago(player_stats, PlayerStats.shots, 9)
 
     def shots_10_games_ago(self, player_stats):
-        return
+        self.logger.info("GETTING SHOTS_10_GAME_AGO")
+        return self.helpers.get_specific_player_stat_from_games_ago(player_stats, PlayerStats.shots, 10)
 
     def ppg_1_game_ago(self, player_stats):
-        return
+        self.logger.info("GETTING PPG_1_GAME_AGO")
+        return self.helpers.get_specific_player_stat_from_games_ago(player_stats, PlayerStats.ppg, 1)
 
     def ppg_2_games_ago(self, player_stats):
-        return
+        self.logger.info("GETTING PPG_2_GAME_AGO")
+        return self.helpers.get_specific_player_stat_from_games_ago(player_stats, PlayerStats.ppg, 2)
 
     def ppg_3_games_ago(self, player_stats):
-        return
+        self.logger.info("GETTING PPG_3_GAME_AGO")
+        return self.helpers.get_specific_player_stat_from_games_ago(player_stats, PlayerStats.ppg, 3)
 
     def ppg_4_games_ago(self, player_stats):
-        return
+        self.logger.info("GETTING PPG_4_GAME_AGO")
+        return self.helpers.get_specific_player_stat_from_games_ago(player_stats, PlayerStats.ppg, 4)
 
     def ppg_5_games_ago(self, player_stats):
-        return
+        self.logger.info("GETTING PPG_5_GAME_AGO")
+        return self.helpers.get_specific_player_stat_from_games_ago(player_stats, PlayerStats.ppg, 5)
 
     def ppg_6_games_ago(self, player_stats):
-        return
+        self.logger.info("GETTING PPG_6_GAME_AGO")
+        return self.helpers.get_specific_player_stat_from_games_ago(player_stats, PlayerStats.ppg, 6)
 
     def ppg_7_games_ago(self, player_stats):
-        return
+        self.logger.info("GETTING PPG_7_GAME_AGO")
+        return self.helpers.get_specific_player_stat_from_games_ago(player_stats, PlayerStats.ppg, 7)
 
     def ppg_8_games_ago(self, player_stats):
-        return
+        self.logger.info("GETTING PPG_8_GAME_AGO")
+        return self.helpers.get_specific_player_stat_from_games_ago(player_stats, PlayerStats.ppg, 8)
 
     def ppg_9_games_ago(self, player_stats):
-        return
+        self.logger.info("GETTING PPG_9_GAME_AGO")
+        return self.helpers.get_specific_player_stat_from_games_ago(player_stats, PlayerStats.ppg, 9)
 
     def ppg_10_games_ago(self, player_stats):
-        return
+        self.logger.info("GETTING PPG_10_GAME_AGO")
+        return self.helpers.get_specific_player_stat_from_games_ago(player_stats, PlayerStats.ppg, 10)
 
     def ppa_1_game_ago(self, player_stats):
-        return
+        self.logger.info("GETTING PPA_1_GAME_AGO")
+        return self.helpers.get_specific_player_stat_from_games_ago(player_stats, PlayerStats.ppa, 1)
 
     def ppa_2_games_ago(self, player_stats):
-        return
+        self.logger.info("GETTING PPA_2_GAME_AGO")
+        return self.helpers.get_specific_player_stat_from_games_ago(player_stats, PlayerStats.ppa, 2)
 
     def ppa_3_games_ago(self, player_stats):
-        return
+        self.logger.info("GETTING PPA_3_GAME_AGO")
+        return self.helpers.get_specific_player_stat_from_games_ago(player_stats, PlayerStats.ppa, 3)
 
     def ppa_4_games_ago(self, player_stats):
-        return
+        self.logger.info("GETTING PPA_4_GAME_AGO")
+        return self.helpers.get_specific_player_stat_from_games_ago(player_stats, PlayerStats.ppa, 4)
 
     def ppa_5_games_ago(self, player_stats):
-        return
+        self.logger.info("GETTING PPA_5_GAME_AGO")
+        return self.helpers.get_specific_player_stat_from_games_ago(player_stats, PlayerStats.ppa, 5)
 
     def ppa_6_games_ago(self, player_stats):
-        return
+        self.logger.info("GETTING PPA_6_GAME_AGO")
+        return self.helpers.get_specific_player_stat_from_games_ago(player_stats, PlayerStats.ppa, 6)
 
     def ppa_7_games_ago(self, player_stats):
-        return
+        self.logger.info("GETTING PPA_7_GAME_AGO")
+        return self.helpers.get_specific_player_stat_from_games_ago(player_stats, PlayerStats.ppa, 7)
 
     def ppa_8_games_ago(self, player_stats):
-        return
+        self.logger.info("GETTING PPA_8_GAME_AGO")
+        return self.helpers.get_specific_player_stat_from_games_ago(player_stats, PlayerStats.ppa, 8)
 
     def ppa_9_games_ago(self, player_stats):
-        return
+        self.logger.info("GETTING PPA_9_GAME_AGO")
+        return self.helpers.get_specific_player_stat_from_games_ago(player_stats, PlayerStats.ppa, 9)
 
     def ppa_10_games_ago(self, player_stats):
-        return
+        self.logger.info("GETTING PPA_10_GAME_AGO")
+        return self.helpers.get_specific_player_stat_from_games_ago(player_stats, PlayerStats.ppa, 10)
 
     def shg_1_game_ago(self, player_stats):
-        return
+        self.logger.info("GETTING SHG_1_GAME_AGO")
+        return self.helpers.get_specific_player_stat_from_games_ago(player_stats, PlayerStats.shg, 1)
 
     def shg_2_games_ago(self, player_stats):
-        return
+        self.logger.info("GETTING SHG_2_GAME_AGO")
+        return self.helpers.get_specific_player_stat_from_games_ago(player_stats, PlayerStats.shg, 2)
 
     def shg_3_games_ago(self, player_stats):
-        return
+        self.logger.info("GETTING SHG_3_GAME_AGO")
+        return self.helpers.get_specific_player_stat_from_games_ago(player_stats, PlayerStats.shg, 3)
 
     def shg_4_games_ago(self, player_stats):
-        return
+        self.logger.info("GETTING SHG_4_GAME_AGO")
+        return self.helpers.get_specific_player_stat_from_games_ago(player_stats, PlayerStats.shg, 4)
 
     def shg_5_games_ago(self, player_stats):
-        return
+        self.logger.info("GETTING SHG_5_GAME_AGO")
+        return self.helpers.get_specific_player_stat_from_games_ago(player_stats, PlayerStats.shg, 5)
 
     def shg_6_games_ago(self, player_stats):
-        return
+        self.logger.info("GETTING SHG_6_GAME_AGO")
+        return self.helpers.get_specific_player_stat_from_games_ago(player_stats, PlayerStats.shg, 6)
 
     def shg_7_games_ago(self, player_stats):
-        return
+        self.logger.info("GETTING SHG_7_GAME_AGO")
+        return self.helpers.get_specific_player_stat_from_games_ago(player_stats, PlayerStats.shg, 7)
 
     def shg_8_games_ago(self, player_stats):
-        return
+        self.logger.info("GETTING SHG_8_GAME_AGO")
+        return self.helpers.get_specific_player_stat_from_games_ago(player_stats, PlayerStats.shg, 8)
 
     def shg_9_games_ago(self, player_stats):
-        return
+        self.logger.info("GETTING SHG_9_GAME_AGO")
+        return self.helpers.get_specific_player_stat_from_games_ago(player_stats, PlayerStats.shg, 9)
 
     def shg_10_games_ago(self, player_stats):
-        return
+        self.logger.info("GETTING SHG_10_GAME_AGO")
+        return self.helpers.get_specific_player_stat_from_games_ago(player_stats, PlayerStats.shg, 10)
 
     def sha_1_game_ago(self, player_stats):
-        return
+        self.logger.info("GETTING SHA_1_GAME_AGO")
+        return self.helpers.get_specific_player_stat_from_games_ago(player_stats, PlayerStats.sha, 1)
 
     def sha_2_games_ago(self, player_stats):
-        return
+        self.logger.info("GETTING SHA_2_GAME_AGO")
+        return self.helpers.get_specific_player_stat_from_games_ago(player_stats, PlayerStats.sha, 2)
 
     def sha_3_games_ago(self, player_stats):
-        return
+        self.logger.info("GETTING SHA_3_GAME_AGO")
+        return self.helpers.get_specific_player_stat_from_games_ago(player_stats, PlayerStats.sha, 3)
 
     def sha_4_games_ago(self, player_stats):
-        return
+        self.logger.info("GETTING SHA_4_GAME_AGO")
+        return self.helpers.get_specific_player_stat_from_games_ago(player_stats, PlayerStats.sha, 4)
 
     def sha_5_games_ago(self, player_stats):
-        return
+        self.logger.info("GETTING SHA_5_GAME_AGO")
+        return self.helpers.get_specific_player_stat_from_games_ago(player_stats, PlayerStats.sha, 5)
 
     def sha_6_games_ago(self, player_stats):
-        return
+        self.logger.info("GETTING SHA_6_GAME_AGO")
+        return self.helpers.get_specific_player_stat_from_games_ago(player_stats, PlayerStats.sha, 6)
 
     def sha_7_games_ago(self, player_stats):
-        return
+        self.logger.info("GETTING SHA_7_GAME_AGO")
+        return self.helpers.get_specific_player_stat_from_games_ago(player_stats, PlayerStats.sha, 7)
 
     def sha_8_games_ago(self, player_stats):
-        return
+        self.logger.info("GETTING SHA_8_GAME_AGO")
+        return self.helpers.get_specific_player_stat_from_games_ago(player_stats, PlayerStats.sha, 8)
 
     def sha_9_games_ago(self, player_stats):
-        return
+        self.logger.info("GETTING SHA_9_GAME_AGO")
+        return self.helpers.get_specific_player_stat_from_games_ago(player_stats, PlayerStats.sha, 9)
 
     def sha_10_games_ago(self, player_stats):
-        return
+        self.logger.info("GETTING SHA_10_GAME_AGO")
+        return self.helpers.get_specific_player_stat_from_games_ago(player_stats, PlayerStats.sha, 10)
 
     def blocked_1_game_ago(self, player_stats):
-        return
+        self.logger.info("GETTING BLOCKED_1_GAME_AGO")
+        blocked = self.helpers.get_specific_player_stat_from_games_ago(player_stats, PlayerStats.blocked, 1)
+        if blocked is None:
+            blocked = 0.0
+        return blocked
 
     def blocked_2_games_ago(self, player_stats):
-        return
+        self.logger.info("GETTING BLOCKED_2_GAME_AGO")
+        blocked = self.helpers.get_specific_player_stat_from_games_ago(player_stats, PlayerStats.blocked, 2)
+        if blocked is None:
+            blocked = 0.0
+        return blocked
 
     def blocked_3_games_ago(self, player_stats):
-        return
+        self.logger.info("GETTING BLOCKED_3_GAME_AGO")
+        blocked = self.helpers.get_specific_player_stat_from_games_ago(player_stats, PlayerStats.blocked, 3)
+        if blocked is None:
+            blocked = 0.0
+        return blocked
 
     def blocked_4_games_ago(self, player_stats):
-        return
+        self.logger.info("GETTING BLOCKED_4_GAME_AGO")
+        blocked = self.helpers.get_specific_player_stat_from_games_ago(player_stats, PlayerStats.blocked, 4)
+        if blocked is None:
+            blocked = 0.0
+        return blocked
 
     def blocked_5_games_ago(self, player_stats):
-        return
+        self.logger.info("GETTING BLOCKED_5_GAME_AGO")
+        blocked = self.helpers.get_specific_player_stat_from_games_ago(player_stats, PlayerStats.blocked, 5)
+        if blocked is None:
+            blocked = 0.0
+        return blocked
 
     def blocked_6_games_ago(self, player_stats):
-        return
+        self.logger.info("GETTING BLOCKED_6_GAME_AGO")
+        blocked = self.helpers.get_specific_player_stat_from_games_ago(player_stats, PlayerStats.blocked, 6)
+        if blocked is None:
+            blocked = 0.0
+        return blocked
 
     def blocked_7_games_ago(self, player_stats):
-        return
+        self.logger.info("GETTING BLOCKED_7_GAME_AGO")
+        blocked = self.helpers.get_specific_player_stat_from_games_ago(player_stats, PlayerStats.blocked, 7)
+        if blocked is None:
+            blocked = 0.0
+        return blocked
 
     def blocked_8_games_ago(self, player_stats):
-        return
+        self.logger.info("GETTING BLOCKED_8_GAME_AGO")
+        blocked = self.helpers.get_specific_player_stat_from_games_ago(player_stats, PlayerStats.blocked, 8)
+        if blocked is None:
+            blocked = 0.0
+        return blocked
 
     def blocked_9_games_ago(self, player_stats):
-        return
+        self.logger.info("GETTING BLOCKED_9_GAME_AGO")
+        blocked = self.helpers.get_specific_player_stat_from_games_ago(player_stats, PlayerStats.blocked, 9)
+        if blocked is None:
+            blocked = 0.0
+        return blocked
 
     def blocked_10_games_ago(self, player_stats):
-        return
+        self.logger.info("GETTING BLOCKED_10_GAME_AGO")
+        blocked = self.helpers.get_specific_player_stat_from_games_ago(player_stats, PlayerStats.blocked, 10)
+        if blocked is None:
+            blocked = 0.0
+        return blocked
 
     def is_defense(self, player_stats):
         return
