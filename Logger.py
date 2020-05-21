@@ -8,7 +8,7 @@ class Logger:
 
     def __init__(self):
         self.log = logging.getLogger()
-        self.log.setLevel(logging.WARNING)
+        self.log.setLevel(logging.DEBUG)
         self.simple_format = logging.Formatter(
             '%(asctime)s - ' +
             '%(levelname)s - ' +
@@ -43,7 +43,7 @@ class Logger:
 
     def setup_local(self):
         self.add_console_handler()
-        # self.add_file_handler("WARNING.log", logging.WARNING)
+        self.add_file_handler("WARNING.log", logging.WARNING)
 
     def setup_current_day(self):
         self.add_file_handler("DEBUG.log", logging.DEBUG)
