@@ -45,6 +45,10 @@ class NetworkInputsMethods:
 
         for game in games:
             self.logger.warning("GAME: " + str(game.get(Games.id)))
+            player_stats_season = int(game.get(Games.id) / 1000000)
+            if player_stats_season != self.helpers.current_season:
+                self.helpers.current_season = player_stats_season
+                self.helpers.player_dict = {}
             select_player_stats = database.entity(PlayerStats)
             select_player_stats.add_where(PlayerStats.game_id, game.get(Games.id))
             single_game_all_player_stats = self.db_manager.select_all(select_player_stats)
@@ -56,6 +60,7 @@ class NetworkInputsMethods:
             all_insert_values = []
             for single_player_stats in single_game_all_player_stats:
                 all_insert_values.extend(self.insert_player_inputs_for_player_stats(single_player_stats, player_params))
+                self.helpers.add_player_stats_to_dict(single_player_stats)
             self.db_manager.insert(all_insert_values)
         self.db_manager.commit()
 
@@ -81,43 +86,35 @@ class NetworkInputsMethods:
 
     def avg_goals_this_season(self, player_stats):
         self.logger.info("GETTING AVG_GOALS_THIS_SEASON")
-        avg_goals = self.helpers.avg_amt_this_season(player_stats, PlayerStats.goals)
-        return avg_goals
+        return self.helpers.get_avg_player_stat_from_season(player_stats, PlayerStats.goals)
 
     def avg_assists_this_season(self, player_stats):
         self.logger.info("GETTING AVG_ASSISTS_THIS_SEASON")
-        avg_assists = self.helpers.avg_amt_this_season(player_stats, PlayerStats.assists)
-        return avg_assists
+        return self.helpers.get_avg_player_stat_from_season(player_stats, PlayerStats.assists)
 
     def avg_shots_this_season(self, player_stats):
         self.logger.info("GETTING AVG_SHOTS_THIS_SEASON")
-        avg_shots = self.helpers.avg_amt_this_season(player_stats, PlayerStats.shots)
-        return avg_shots
+        return self.helpers.get_avg_player_stat_from_season(player_stats, PlayerStats.shots)
 
     def avg_ppg_this_season(self, player_stats):
         self.logger.info("GETTING AVG_PPG_THIS_SEASON")
-        avg_ppg = self.helpers.avg_amt_this_season(player_stats, PlayerStats.ppg)
-        return avg_ppg
+        return self.helpers.get_avg_player_stat_from_season(player_stats, PlayerStats.ppg)
 
     def avg_ppa_this_season(self, player_stats):
         self.logger.info("GETTING AVG_PPA_THIS_SEASON")
-        avg_ppa = self.helpers.avg_amt_this_season(player_stats, PlayerStats.ppa)
-        return avg_ppa
+        return self.helpers.get_avg_player_stat_from_season(player_stats, PlayerStats.ppa)
 
     def avg_shg_this_season(self, player_stats):
         self.logger.info("GETTING AVG_SHG_THIS_SEASON")
-        avg_shg = self.helpers.avg_amt_this_season(player_stats, PlayerStats.shg)
-        return avg_shg
+        return self.helpers.get_avg_player_stat_from_season(player_stats, PlayerStats.shg)
 
     def avg_sha_this_season(self, player_stats):
         self.logger.info("GETTING AVG_SHA_THIS_SEASON")
-        avg_sha = self.helpers.avg_amt_this_season(player_stats, PlayerStats.sha)
-        return avg_sha
+        return self.helpers.get_avg_player_stat_from_season(player_stats, PlayerStats.sha)
 
     def avg_blocked_this_season(self, player_stats):
         self.logger.info("GETTING AVG_BLOCKED_THIS_SEASON")
-        avg_blocked = self.helpers.avg_amt_this_season(player_stats, PlayerStats.blocked)
-        return avg_blocked
+        return self.helpers.get_avg_player_stat_from_season(player_stats, PlayerStats.blocked)
 
     def goals_1_game_ago(self, player_stats):
         self.logger.info("GETTING GOALS_1_GAME_AGO")
