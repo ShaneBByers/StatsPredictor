@@ -7,12 +7,15 @@ from DataManager import DataManager
 # TOLERANCE +/- 5 POINTS  : 327886 = 47.724%
 # TOLERANCE +/- 10 POINTS : 581320 = 84.611%
 
+# Using NN with averages and last 10 games:
+# TOLERANCE +/= 5 POINTS  : 56.467%
+
 logger = Logger()
 logger.setup_local()
 
 manager = DataManager()
 # manager.manager_nn_inputs.insert_new_inputs()
-manager.manager_nn_inputs.pickle_inputs()
+# manager.manager_nn_inputs.pickle_inputs()
 # manager.manager_nn_inputs.fix_server_pickle()
-# manager.manager_nn.train_network()
+manager.manager_nn.train_network()
 # manager.manager_pred.calculate_accuracy()

@@ -1,4 +1,5 @@
 import logging
+from datetime import datetime
 from NetworkInputsHelpers import NetworkInputsHelpers
 from database import database
 from Generated.DatabaseClasses import *
@@ -46,9 +47,19 @@ class NetworkInputsMethods:
         for game in games:
             self.logger.warning("GAME: " + str(game.get(Games.id)))
             player_stats_season = int(game.get(Games.id) / 1000000)
-            if player_stats_season != self.helpers.current_season:
-                self.helpers.current_season = player_stats_season
-                self.helpers.player_dict = {}
+            if player_stats_season != self.helpers.player_stats_dict_year:
+                self.helpers.player_stats_dict_year = player_stats_season
+                self.helpers.player_stats_dict = {}
+                self.helpers.goalie_stats_dict = {}
+                self.helpers.team_stats_dict = {}
+                self.helpers.team_game_dict = {}
+                self.helpers.games_teams_dict = {}
+            self.helpers.add_game(game.get(Games.id))
+            select_goalie_stats = database.entity(GoalieStats)
+            select_goalie_stats.add_where(GoalieStats.game_id, game.get(Games.id))
+            single_game_all_goalie_stats = self.db_manager.select_all(select_goalie_stats)
+            for single_goalie_stats in single_game_all_goalie_stats:
+                self.helpers.add_goalie_stats_to_dict(single_goalie_stats)
             select_player_stats = database.entity(PlayerStats)
             select_player_stats.add_where(PlayerStats.game_id, game.get(Games.id))
             single_game_all_player_stats = self.db_manager.select_all(select_player_stats)
@@ -61,6 +72,7 @@ class NetworkInputsMethods:
             for single_player_stats in single_game_all_player_stats:
                 all_insert_values.extend(self.insert_player_inputs_for_player_stats(single_player_stats, player_params))
                 self.helpers.add_player_stats_to_dict(single_player_stats)
+            self.helpers.add_team_stats_to_dict(game.get(Games.id))
             self.db_manager.insert(all_insert_values)
         self.db_manager.commit()
 
@@ -71,7 +83,7 @@ class NetworkInputsMethods:
                           str(player_stats.get(PlayerStats.player_id)))
         insert_values = []
         for player_param in player_params:
-            if not player_param.get(NnPlayerParams.is_done) and player_param.get(NnPlayerParams.id) <= 88:
+            if not player_param.get(NnPlayerParams.is_done) and player_param.get(NnPlayerParams.id) <= 150:
                 insert_player_input = database.entity(NnPlayerInputs)
                 insert_player_input.set(NnPlayerInputs.game_id, player_stats.get(PlayerStats.game_id))
                 insert_player_input.set(NnPlayerInputs.player_id, player_stats.get(PlayerStats.player_id))
@@ -81,7 +93,7 @@ class NetworkInputsMethods:
                 input_value = method(player_stats)
                 insert_player_input.set(NnPlayerInputs.input_value, input_value)
                 insert_values.append(insert_player_input)
-                # self.db_manager.insert(insert_player_input, commit=False)
+                self.db_manager.insert(insert_player_input, commit=False)
         return insert_values
 
     def avg_goals_this_season(self, player_stats):
@@ -467,190 +479,318 @@ class NetworkInputsMethods:
         return blocked
 
     def is_defense(self, player_stats):
-        return
+        self.logger.info("GETTING IS_DEFENSE")
+        player = self.helpers.get_player_data(player_stats)
+        position = player.get(Players.position)
+        return position == 'D'
 
     def is_center(self, player_stats):
-        return
+        self.logger.info("GETTING IS_CENTER")
+        player = self.helpers.get_player_data(player_stats)
+        position = player.get(Players.position)
+        return position == 'C'
 
     def is_left_winger(self, player_stats):
-        return
+        self.logger.info("GETTING IS_LEFT_WINGER")
+        player = self.helpers.get_player_data(player_stats)
+        position = player.get(Players.position)
+        return position == 'L'
 
     def is_right_winger(self, player_stats):
-        return
+        self.logger.info("GETTING IS_RIGHT_WINGER")
+        player = self.helpers.get_player_data(player_stats)
+        position = player.get(Players.position)
+        return position == 'R'
 
     def shoots_right(self, player_stats):
-        return
+        self.logger.info("GETTING SHOOTS_RIGHT")
+        player = self.helpers.get_player_data(player_stats)
+        shoots = player.get(Players.shoots)
+        return shoots == 'R'
 
     def player_age(self, player_stats):
-        return
+        self.logger.info("GETTING PLAYER_AGE")
+        player = self.helpers.get_player_data(player_stats)
+        birth_date = player.get(Players.birth_date)
+        today = datetime.now()
+        return today.year - birth_date.year
 
     def player_height(self, player_stats):
-        return
+        self.logger.info("GETTING PLAYER_HEIGHT")
+        player = self.helpers.get_player_data(player_stats)
+        return player.get(Players.height)
 
     def player_weight(self, player_stats):
-        return
+        self.logger.info("GETTING PLAYER_WEIGHT")
+        player = self.helpers.get_player_data(player_stats)
+        return player.get(Players.weight)
 
     def season_years_ago(self, player_stats):
-        return
+        self.logger.info("GETTING SEASON_YEARS_AGO")
+        current_season_year = self.helpers.get_current_season_year()
+        game_id = player_stats.get(PlayerStats.game_id)
+        game_year = int(str(game_id)[:4])
+        return current_season_year - game_year
 
     def is_divisional_game(self, player_stats):
-        return
+        self.logger.info("GETTING IS_DIVISIONAL_GAME")
+        team_id = player_stats.get(PlayerStats.team_id)
+        game_id = player_stats.get(PlayerStats.game_id)
+        opp_game_select = database.entity(Games)
+        opp_game_select.add_where(Games.id, game_id)
+        opp_game_select.add_where(Games.team_id, team_id, "!=")
+        opp_game = self.db_manager.select_single(opp_game_select)
+        opp_team_id = opp_game.get(Games.team_id)
+        is_same_division = self.helpers.is_same_division(team_id, opp_team_id)
+        return is_same_division
 
     def is_conference_game(self, player_stats):
-        return
+        self.logger.info("GETTING IS_DIVISIONAL_GAME")
+        team_id = player_stats.get(PlayerStats.team_id)
+        game_id = player_stats.get(PlayerStats.game_id)
+        opp_game_select = database.entity(Games)
+        opp_game_select.add_where(Games.id, game_id)
+        opp_game_select.add_where(Games.team_id, team_id, "!=")
+        opp_game = self.db_manager.select_single(opp_game_select)
+        opp_team_id = opp_game.get(Games.team_id)
+        is_same_conference = self.helpers.is_same_conference(team_id, opp_team_id)
+        return is_same_conference
 
     def is_home_game(self, player_stats):
-        return
+        self.logger.info("GETTING IS_HOME_GAME")
+        team_id = player_stats.get(PlayerStats.team_id)
+        game_id = player_stats.get(PlayerStats.game_id)
+        game_select = database.entity(Games)
+        game_select.add_where(Games.id, game_id)
+        game_select.add_where(Games.team_id, team_id)
+        game = self.db_manager.select_single(game_select)
+        is_home = game.get(Games.is_home)
+        return is_home
 
     def game_start_hour(self, player_stats):
-        return
+        self.logger.info("GETTING GAME_START_HOUR")
+        game_id = player_stats.get(PlayerStats.game_id)
+        game_select = database.entity(Games)
+        game_select.add_where(Games.id, game_id)
+        game = self.db_manager.select_single(game_select)
+        start_hour = game.get(Games.date_time).hour
+        return start_hour
 
     def player_season_game_count(self, player_stats):
-        return
+        self.logger.info("GETTING PLAYER_SEASON_GAME_COUNT")
+        player_id = player_stats.get(PlayerStats.player_id)
+        game_count = self.helpers.get_player_games(player_id)
+        return game_count
 
     def team_season_game_count(self, player_stats):
-        return
+        self.logger.info("GETTING TEAM_SEASON_GAME_COUNT")
+        team_id = player_stats.get(PlayerStats.team_id)
+        game_id = player_stats.get(PlayerStats.game_id)
+        game_count = self.helpers.get_team_season_game_count(team_id, game_id)
+        return game_count
 
     def team_games_since_last_player_game(self, player_stats):
-        return
+        self.logger.info("GETTING TEAM_GAMES_SINCE_LAST_PLAYER_GAME")
+        game_count = self.helpers.get_team_games_since_last_player_game(player_stats)
+        return game_count
 
     def player_season_games_on_team(self, player_stats):
-        return
+        self.logger.info("GETTING PLAYER_SEASON_GAMES_ON_TEAM")
+        game_count = self.helpers.get_player_season_games_on_team(player_stats)
+        return game_count
 
     def player_season_avg_pim(self, player_stats):
-        return
+        self.logger.info("GETTING AVG_PIM_THIS_SEASON")
+        return self.helpers.get_avg_player_stat_from_season(player_stats, PlayerStats.pim)
 
     def player_season_total_plus_minus(self, player_stats):
-        return
+        self.logger.info("GETTING AVG_PLUS_MINUS_THIS_SEASON")
+        return self.helpers.get_avg_player_stat_from_season(player_stats, PlayerStats.plus_minus, total=True)
 
     def player_season_avg_takeaways(self, player_stats):
-        return
+        self.logger.info("GETTING AVG_TAKEAWAYS_THIS_SEASON")
+        return self.helpers.get_avg_player_stat_from_season(player_stats, PlayerStats.takeaways)
 
     def player_season_avg_giveaways(self, player_stats):
-        return
+        self.logger.info("GETTING AVG_GIVEAWAYS_THIS_SEASON")
+        return self.helpers.get_avg_player_stat_from_season(player_stats, PlayerStats.giveaways)
 
     def player_season_avg_toi(self, player_stats):
-        return
+        self.logger.info("GETTING AVG_TOI_THIS_SEASON")
+        return self.helpers.get_avg_player_stat_from_season(player_stats, PlayerStats.toi_sec)
 
     def player_season_avg_pp_toi(self, player_stats):
-        return
+        self.logger.info("GETTING AVG_PP_TOI_THIS_SEASON")
+        return self.helpers.get_avg_player_stat_from_season(player_stats, PlayerStats.pp_toi_sec)
 
     def player_season_avg_sh_toi(self, player_stats):
-        return
+        self.logger.info("GETTING AVG_SH_TOI_THIS_SEASON")
+        return self.helpers.get_avg_player_stat_from_season(player_stats, PlayerStats.sh_toi_sec)
 
     def player_season_avg_even_toi(self, player_stats):
-        return
+        self.logger.info("GETTING AVG_EVEN_TOI_THIS_SEASON")
+        return self.helpers.get_avg_player_stat_from_season(player_stats, PlayerStats.even_toi_sec)
 
     def player_season_avg_toi_last_10_games(self, player_stats):
-        return
+        self.logger.info("GETTING AVG_TOI_LAST_10_GAMES")
+        seconds = self.helpers.get_avg_player_stat_from_games_ago(player_stats, PlayerStats.toi_sec, 10)
+        return seconds
 
     def player_season_avg_pp_toi_last_10_games(self, player_stats):
-        return
+        self.logger.info("GETTING AVG_PP_TOI_LAST_10_GAMES")
+        seconds = self.helpers.get_avg_player_stat_from_games_ago(player_stats, PlayerStats.pp_toi_sec, 10)
+        return seconds
 
     def player_season_avg_sh_toi_last_10_games(self, player_stats):
-        return
+        self.logger.info("GETTING AVG_SH_TOI_LAST_10_GAMES")
+        seconds = self.helpers.get_avg_player_stat_from_games_ago(player_stats, PlayerStats.sh_toi_sec, 10)
+        return seconds
 
     def player_season_avg_even_toi_last_10_games(self, player_stats):
-        return
+        self.logger.info("GETTING AVG_EVEN_TOI_LAST_10_GAMES")
+        seconds = self.helpers.get_avg_player_stat_from_games_ago(player_stats, PlayerStats.even_toi_sec, 10)
+        return seconds
 
     def team_season_avg_goals(self, player_stats):
-        return
+        self.logger.info("GETTING AVG_TEAM_GOALS_THIS_SEASON")
+        return self.helpers.get_avg_team_stat_from_season(player_stats, TeamStats.goals)
 
     def team_season_avg_shots(self, player_stats):
-        return
+        self.logger.info("GETTING AVG_TEAM_SHOTS_THIS_SEASON")
+        return self.helpers.get_avg_team_stat_from_season(player_stats, TeamStats.shots)
 
     def team_season_avg_pps(self, player_stats):
-        return
+        self.logger.info("GETTING AVG_TEAM_PPS_THIS_SEASON")
+        return self.helpers.get_avg_team_stat_from_season(player_stats, TeamStats.pp)
 
     def team_season_avg_ppgs(self, player_stats):
-        return
+        self.logger.info("GETTING AVG_TEAM_PPGS_THIS_SEASON")
+        return self.helpers.get_avg_team_stat_from_season(player_stats, TeamStats.ppg)
 
     def team_season_avg_pim(self, player_stats):
-        return
+        self.logger.info("GETTING AVG_TEAM_PIM_THIS_SEASON")
+        return self.helpers.get_avg_team_stat_from_season(player_stats, TeamStats.pim)
 
     def team_season_avg_blocked(self, player_stats):
-        return
+        self.logger.info("GETTING AVG_TEAM_BLOCKED_THIS_SEASON")
+        return self.helpers.get_avg_team_stat_from_season(player_stats, TeamStats.blocked)
 
     def team_season_avg_takeaways(self, player_stats):
-        return
+        self.logger.info("GETTING AVG_TEAM_TAKEAWAYS_THIS_SEASON")
+        return self.helpers.get_avg_team_stat_from_season(player_stats, TeamStats.takeaways)
 
     def team_season_avg_giveaways(self, player_stats):
-        return
+        self.logger.info("GETTING AVG_TEAM_GIVEAWAYS_THIS_SEASON")
+        return self.helpers.get_avg_team_stat_from_season(player_stats, TeamStats.giveaways)
 
     def team_season_avg_hits(self, player_stats):
-        return
+        self.logger.info("GETTING AVG_TEAM_HITS_THIS_SEASON")
+        return self.helpers.get_avg_team_stat_from_season(player_stats, TeamStats.hits)
 
     def opp_team_season_avg_pps(self, player_stats):
-        return
+        self.logger.info("GETTING AVG_OPP_TEAM_PPS_THIS_SEASON")
+        return self.helpers.get_avg_team_stat_from_season(player_stats, TeamStats.pp, opponent=True)
 
     def opp_team_season_avg_pim(self, player_stats):
-        return
+        self.logger.info("GETTING AVG_OPP_TEAM_PIM_THIS_SEASON")
+        return self.helpers.get_avg_team_stat_from_season(player_stats, TeamStats.pim, opponent=True)
 
     def opp_team_season_avg_blocked(self, player_stats):
-        return
+        self.logger.info("GETTING AVG_OPP_TEAM_BLOCKED_THIS_SEASON")
+        return self.helpers.get_avg_team_stat_from_season(player_stats, TeamStats.blocked, opponent=True)
 
     def opp_team_season_avg_hits(self, player_stats):
-        return
+        self.logger.info("GETTING AVG_OPP_TEAM_HITS_THIS_SEASON")
+        return self.helpers.get_avg_team_stat_from_season(player_stats, TeamStats.hits, opponent=True)
 
     def opp_goalie_season_avg_sa(self, player_stats):
-        return
+        self.logger.info("GETTING OPP_GOALIE_AVG_SA_THIS_SEASON")
+        return self.helpers.get_opp_goalie_avg_stat_this_season(player_stats, GoalieStats.total_shots)
 
     def opp_goalie_season_avg_even_sa(self, player_stats):
-        return
+        self.logger.info("GETTING OPP_GOALIE_AVG_EVEN_SA_THIS_SEASON")
+        return self.helpers.get_opp_goalie_avg_stat_this_season(player_stats, GoalieStats.even_shots)
 
     def opp_goalie_season_avg_pp_sa(self, player_stats):
-        return
+        self.logger.info("GETTING OPP_GOALIE_AVG_PP_SA_THIS_SEASON")
+        return self.helpers.get_opp_goalie_avg_stat_this_season(player_stats, GoalieStats.pp_shots)
 
     def opp_goalie_season_avg_sh_sa(self, player_stats):
-        return
+        self.logger.info("GETTING OPP_GOALIE_AVG_SH_SA_THIS_SEASON")
+        return self.helpers.get_opp_goalie_avg_stat_this_season(player_stats, GoalieStats.sh_shots)
 
     def opp_goalie_season_avg_saves(self, player_stats):
-        return
+        self.logger.info("GETTING OPP_GOALIE_AVG_SA_THIS_SEASON")
+        return self.helpers.get_opp_goalie_avg_stat_this_season(player_stats, GoalieStats.total_saves)
 
     def opp_goalie_season_avg_even_saves(self, player_stats):
-        return
+        self.logger.info("GETTING OPP_GOALIE_AVG_EVEN_SAVES_THIS_SEASON")
+        return self.helpers.get_opp_goalie_avg_stat_this_season(player_stats, GoalieStats.even_saves)
 
     def opp_goalie_season_avg_pp_saves(self, player_stats):
-        return
+        self.logger.info("GETTING OPP_GOALIE_AVG_PP_SAVES_THIS_SEASON")
+        return self.helpers.get_opp_goalie_avg_stat_this_season(player_stats, GoalieStats.pp_saves)
 
     def opp_goalie_season_avg_sh_saves(self, player_stats):
-        return
+        self.logger.info("GETTING OPP_GOALIE_AVG_SH_SAVES_THIS_SEASON")
+        return self.helpers.get_opp_goalie_avg_stat_this_season(player_stats, GoalieStats.sh_saves)
 
     def opp_goalie_season_avg_save_percent(self, player_stats):
-        return
+        self.logger.info("GETTING OPP_GOALIE_AVG_SAVE_PERCENT_THIS_SEASON")
+        return self.helpers.get_opp_goalie_avg_stat_this_season(player_stats, GoalieStats.total_saves, GoalieStats.total_shots)
 
     def opp_goalie_season_avg_even_save_percent(self, player_stats):
-        return
+        self.logger.info("GETTING OPP_GOALIE_AVG_EVEN_SAVE_PERCENT_THIS_SEASON")
+        return self.helpers.get_opp_goalie_avg_stat_this_season(player_stats, GoalieStats.even_saves, GoalieStats.even_shots)
 
     def opp_goalie_season_avg_pp_save_percent(self, player_stats):
-        return
+        self.logger.info("GETTING OPP_GOALIE_AVG_PP_SAVE_PERCENT_THIS_SEASON")
+        return self.helpers.get_opp_goalie_avg_stat_this_season(player_stats, GoalieStats.pp_saves, GoalieStats.pp_shots)
 
     def opp_goalie_season_avg_sh_save_percent(self, player_stats):
-        return
+        self.logger.info("GETTING OPP_GOALIE_AVG_SH_SAVE_PERCENT_THIS_SEASON")
+        return self.helpers.get_opp_goalie_avg_stat_this_season(player_stats, GoalieStats.sh_saves, GoalieStats.sh_shots)
 
     def opp_goalie_season_game_count(self, player_stats):
-        return
+        self.logger.info("GETTING OPP_GOALIE_SEASON_GAME_COUNT")
+        game_count = self.helpers.get_opp_goalie_games(player_stats)
+        return game_count
 
     def opp_goalie_season_avg_toi(self, player_stats):
-        return
+        self.logger.info("GETTING OPP_GOALIE_AVG_TOI_THIS_SEASON")
+        return self.helpers.get_opp_goalie_avg_stat_this_season(player_stats, GoalieStats.toi_sec)
 
     def days_since_last_team_game(self, player_stats):
-        return
+        self.logger.info("GETTING DAYS_SINCE_LAST_TEAM_GAME")
+        return self.helpers.get_days_since_last_team_game(player_stats)
 
     def days_since_last_opp_team_game(self, player_stats):
-        return
+        self.logger.info("GETTING DAYS_SINCE_LAST_OPP_TEAM_GAME")
+        return self.helpers.get_days_since_last_team_game(player_stats, is_opp=True)
 
     def days_since_last_player_game(self, player_stats):
-        return
+        self.logger.info("GETTING DAYS_SINCE_LAST_PLAYER_GAME")
+        return self.helpers.get_days_since_last_player_game(player_stats)
 
     def days_since_last_opp_goalie_game(self, player_stats):
-        return
+        self.logger.info("GETTING DAYS_SINCE_LAST_OPP_GOALIE_GAME")
+        return self.helpers.get_days_since_last_player_game(player_stats, is_opp=True)
 
     def is_playoff_game(self, player_stats):
-        return
+        self.logger.info("GETTING IS_PLAYOFF_GAME")
+        game_id = player_stats.get(PlayerStats.game_id)
+        game_val = int(str(game_id)[5])
+        return game_val == 3
 
     def playoff_round(self, player_stats):
-        return
+        self.logger.info("GETTING PLAYOFF_ROUND")
+        game_id = player_stats.get(PlayerStats.game_id)
+        is_playoff_val = int(str(game_id)[5])
+        if is_playoff_val == 3:
+            round_val = int(str(game_id)[7])
+            return round_val
+        else:
+            return 0
 
     def team_vs_opp_last_5_seasons_game_count(self, player_stats):
         return
