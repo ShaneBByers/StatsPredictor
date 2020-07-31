@@ -37,6 +37,7 @@ class NetworkInputsMethods:
 
         select_games = database.entity(Games)
         select_games.add_where(Games.is_home, True)
+        select_games.add_where(Games.id, 2007000000, ">")
         select_games.add_order_by(Games.id)
         games = self.db_manager.select_all(select_games)
         self.logger.debug("Got " +
