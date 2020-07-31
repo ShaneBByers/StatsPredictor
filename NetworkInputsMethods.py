@@ -1,5 +1,4 @@
 import logging
-from datetime import datetime
 from NetworkInputsHelpers import NetworkInputsHelpers
 from database import database
 from Generated.DatabaseClasses import *
@@ -43,7 +42,7 @@ class NetworkInputsMethods:
         self.logger.debug("Got " +
                           str(len(games)) +
                           " GAMES to consider")
-
+        # 2005020043 5 8450725
         for game in games:
             self.logger.warning("GAME: " + str(game.get(Games.id)))
             player_stats_season = int(game.get(Games.id) / 1000000)
@@ -93,7 +92,6 @@ class NetworkInputsMethods:
                 input_value = method(player_stats)
                 insert_player_input.set(NnPlayerInputs.input_value, input_value)
                 insert_values.append(insert_player_input)
-                self.db_manager.insert(insert_player_input, commit=False)
         return insert_values
 
     def avg_goals_this_season(self, player_stats):
@@ -512,7 +510,7 @@ class NetworkInputsMethods:
         self.logger.info("GETTING PLAYER_AGE")
         player = self.helpers.get_player_data(player_stats)
         birth_date = player.get(Players.birth_date)
-        today = datetime.now()
+        today = self.helpers.get_game_datetime(player_stats)
         return today.year - birth_date.year
 
     def player_height(self, player_stats):
@@ -535,45 +533,25 @@ class NetworkInputsMethods:
     def is_divisional_game(self, player_stats):
         self.logger.info("GETTING IS_DIVISIONAL_GAME")
         team_id = player_stats.get(PlayerStats.team_id)
-        game_id = player_stats.get(PlayerStats.game_id)
-        opp_game_select = database.entity(Games)
-        opp_game_select.add_where(Games.id, game_id)
-        opp_game_select.add_where(Games.team_id, team_id, "!=")
-        opp_game = self.db_manager.select_single(opp_game_select)
-        opp_team_id = opp_game.get(Games.team_id)
+        opp_team_id = self.helpers.get_opp_team_id(player_stats)
         is_same_division = self.helpers.is_same_division(team_id, opp_team_id)
         return is_same_division
 
     def is_conference_game(self, player_stats):
-        self.logger.info("GETTING IS_DIVISIONAL_GAME")
+        self.logger.info("GETTING IS_CONFERENCE_GAME")
         team_id = player_stats.get(PlayerStats.team_id)
-        game_id = player_stats.get(PlayerStats.game_id)
-        opp_game_select = database.entity(Games)
-        opp_game_select.add_where(Games.id, game_id)
-        opp_game_select.add_where(Games.team_id, team_id, "!=")
-        opp_game = self.db_manager.select_single(opp_game_select)
-        opp_team_id = opp_game.get(Games.team_id)
+        opp_team_id = self.helpers.get_opp_team_id(player_stats)
         is_same_conference = self.helpers.is_same_conference(team_id, opp_team_id)
         return is_same_conference
 
     def is_home_game(self, player_stats):
         self.logger.info("GETTING IS_HOME_GAME")
-        team_id = player_stats.get(PlayerStats.team_id)
-        game_id = player_stats.get(PlayerStats.game_id)
-        game_select = database.entity(Games)
-        game_select.add_where(Games.id, game_id)
-        game_select.add_where(Games.team_id, team_id)
-        game = self.db_manager.select_single(game_select)
-        is_home = game.get(Games.is_home)
+        is_home = self.helpers.get_is_home_game(player_stats)
         return is_home
 
     def game_start_hour(self, player_stats):
         self.logger.info("GETTING GAME_START_HOUR")
-        game_id = player_stats.get(PlayerStats.game_id)
-        game_select = database.entity(Games)
-        game_select.add_where(Games.id, game_id)
-        game = self.db_manager.select_single(game_select)
-        start_hour = game.get(Games.date_time).hour
+        start_hour = self.helpers.get_game_start_hour(player_stats)
         return start_hour
 
     def player_season_game_count(self, player_stats):

@@ -45,8 +45,9 @@ class NetworkInputsHelpers:
         goalie_id = self.get_opp_goalie_id_with_most_toi(player_stats)
         if goalie_id in self.goalie_stats_dict:
             total_stat = 0.0
+            total_divide_stat = 0.0
             total_len = 0
-            for single_goalie_stats in self.goalie_stats_dict:
+            for single_goalie_stats in self.goalie_stats_dict[goalie_id]:
                 if single_goalie_stats.get(GoalieStats.game_id) != player_stats.get(PlayerStats.game_id):
                     single_amt = single_goalie_stats.get(specific_stat)
                     if single_amt is None:
@@ -54,11 +55,15 @@ class NetworkInputsHelpers:
                     else:
                         if divide_specific_stat is not None:
                             divide_amt = single_goalie_stats.get(divide_specific_stat)
-                            if divide_amt is not None and divide_amt != 0.0:
-                                single_amt /= divide_amt
+                            if divide_amt is None:
+                                divide_amt = 0.0
+                            total_divide_stat += divide_amt
                     total_stat += single_amt
                     total_len += 1
-            if total_len > 0:
+            if divide_specific_stat is not None:
+                if total_divide_stat != 0.0:
+                    return total_stat / total_divide_stat
+            elif total_len > 0:
                 return total_stat / total_len
         return 0.0
 
@@ -67,7 +72,7 @@ class NetworkInputsHelpers:
         if opponent:
             game_id = player_stats.get(PlayerStats.game_id)
             team_id_list = self.games_teams_dict[game_id]
-            for single_team_id in team_id_list:
+            for single_team_id, _ in team_id_list:
                 if single_team_id != team_id:
                     team_id = single_team_id
                     break
@@ -148,7 +153,7 @@ class NetworkInputsHelpers:
         for single_game in both_games:
             if single_game.get(Games.is_home):
                 self.game_times_dict[game_id] = single_game.get(Games.date_time)
-            team_id_list.append(single_game.get(Games.id))
+            team_id_list.append((single_game.get(Games.team_id), single_game.get(Games.is_home)))
         self.games_teams_dict[game_id] = team_id_list
 
     def get_player_data(self, player_stats):
@@ -197,8 +202,30 @@ class NetworkInputsHelpers:
                         break
         return self.team_conference_dict[first_team_id] == self.team_conference_dict[second_team_id]
 
+    def get_is_home_game(self, player_stats):
+        game_id = player_stats.get(PlayerStats.game_id)
+        team_id = player_stats.get(PlayerStats.team_id)
+        both_team_ids = self.games_teams_dict[game_id]
+        for single_team_id, is_home in both_team_ids:
+            if single_team_id == team_id:
+                return is_home == 1
+
+    def get_game_start_hour(self, player_stats):
+        game_id = player_stats.get(PlayerStats.game_id)
+        game_datetime = self.game_times_dict[game_id]
+        start_hour = game_datetime.hour
+        return start_hour
+
+    def get_game_datetime(self, player_stats):
+        game_id = player_stats.get(PlayerStats.game_id)
+        game_datetime = self.game_times_dict[game_id]
+        return game_datetime
+
     def get_player_games(self, player_id):
-        return len(self.player_stats_dict[player_id])
+        if player_id in self.player_stats_dict:
+            return len(self.player_stats_dict[player_id])
+        else:
+            return 0
 
     def get_opp_goalie_games(self, player_stats):
         goalie_id = self.get_opp_goalie_id_with_most_toi(player_stats)
@@ -215,11 +242,15 @@ class NetworkInputsHelpers:
 
     def get_team_games_since_last_player_game(self, player_stats):
         team_id = player_stats.get(PlayerStats.team_id)
+        player_id = player_stats.get(PlayerStats.player_id)
         count = 0
-        for team_game_id in reversed(self.team_game_dict[team_id]):
-            for single_player_stats in self.player_stats_dict[player_stats.get(PlayerStats.player_id)]:
-                if single_player_stats.get(PlayerStats.game_id) == team_game_id:
-                    return count
+        for team_game_id in reversed(self.team_game_dict[team_id][:-1]):
+            if player_id in self.player_stats_dict:
+                for single_player_stats in self.player_stats_dict[player_stats.get(PlayerStats.player_id)]:
+                    if single_player_stats.get(PlayerStats.game_id) == team_game_id:
+                        return count
+            else:
+                return 0
             count += 1
         return 0
 
@@ -227,13 +258,15 @@ class NetworkInputsHelpers:
         team_id = player_stats.get(PlayerStats.team_id)
         player_id = player_stats.get(PlayerStats.player_id)
         count = 0
-        for single_player_stats in self.player_stats_dict[player_id]:
-            if single_player_stats.get(PlayerStats.team_id) == team_id:
-                count += 1
+        if player_id in self.player_stats_dict:
+            for single_player_stats in self.player_stats_dict[player_id]:
+                if single_player_stats.get(PlayerStats.team_id) == team_id:
+                    count += 1
         return count
 
     def get_opp_goalie_id_with_most_toi(self, player_stats):
         opp_team_id = self.get_opp_team_id(player_stats)
+        game_id = player_stats.get(PlayerStats.game_id)
         all_goalie_stats_for_game = self.goalie_game_stats_dict[game_id][opp_team_id]
         most_toi_goalie = None
         for single_goalie_game_stats in all_goalie_stats_for_game:
@@ -248,9 +281,10 @@ class NetworkInputsHelpers:
         team_id = player_stats.get(PlayerStats.team_id)
         both_team_ids = self.games_teams_dict[game_id]
         opp_team_id = None
-        for single_team_id in both_team_ids:
+        for single_team_id, _ in both_team_ids:
             if single_team_id != team_id:
                 opp_team_id = single_team_id
+                break
         return opp_team_id
 
     def get_days_since_last_team_game(self, player_stats, is_opp=False):
@@ -260,27 +294,31 @@ class NetworkInputsHelpers:
             team_id = self.get_opp_team_id(player_stats)
         else:
             team_id = player_stats.get(PlayerStats.team_id)
-        if len(self.team_game_dict[team_id]) >= 1:
-            previous_game_id = self.team_game_dict[team_id][-1]
-            previous_game_time = self.game_times_dict[previous_game_id]
-            delta = current_game_time - previous_game_time
-            return delta.days
+        if team_id not in self.team_game_dict:
+            return 0
+        for check_game_id in reversed(self.team_game_dict[team_id]):
+            if check_game_id != game_id:
+                previous_game_time = self.game_times_dict[check_game_id]
+                delta = current_game_time.date() - previous_game_time.date()
+                return delta.days
         return 0
 
     def get_days_since_last_player_game(self, player_stats, is_opp=False):
         game_id = player_stats.get(PlayerStats.game_id)
         current_game_time = self.game_times_dict[game_id]
+        previous_game_id = None
         if is_opp:
-            player_id = self.get_opp_goalie_id_with_most_toi(player_stats)
+            goalie_id = self.get_opp_goalie_id_with_most_toi(player_stats)
+            if goalie_id in self.goalie_stats_dict and len(self.goalie_stats_dict[goalie_id]) >= 2:
+                previous_goalie_stats = self.goalie_stats_dict[goalie_id][1]
+                previous_game_id = previous_goalie_stats.get(GoalieStats.game_id)
         else:
             player_id = player_stats.get(PlayerStats.player_id)
-        if len(self.player_stats_dict[player_id]) >= 1:
-            previous_player_stats = self.player_stats_dict[player_id][0]
-            if is_opp:
-                previous_game_id = previous_player_stats.get(GoalieStats.game_id)
-            else:
+            if player_id in self.player_stats_dict and len(self.player_stats_dict[player_id]) >= 1:
+                previous_player_stats = self.player_stats_dict[player_id][0]
                 previous_game_id = previous_player_stats.get(PlayerStats.game_id)
+        if previous_game_id is not None:
             previous_game_time = self.game_times_dict[previous_game_id]
-            delta = current_game_time - previous_game_time
+            delta = current_game_time.date() - previous_game_time.date()
             return delta.days
         return 0
