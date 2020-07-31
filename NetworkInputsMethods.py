@@ -72,7 +72,7 @@ class NetworkInputsMethods:
                 all_insert_values.extend(self.insert_player_inputs_for_player_stats(single_player_stats, player_params))
                 self.helpers.add_player_stats_to_dict(single_player_stats)
             self.helpers.add_team_stats_to_dict(game.get(Games.id))
-            self.db_manager.insert(all_insert_values)
+            self.db_manager.insert(all_insert_values, commit=False)
         self.db_manager.commit()
 
     def insert_player_inputs_for_player_stats(self, player_stats, player_params):
