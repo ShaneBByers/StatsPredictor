@@ -50,9 +50,13 @@ class NetworkInputsMethods:
                 self.helpers.player_stats_dict_year = player_stats_season
                 self.helpers.player_stats_dict = {}
                 self.helpers.goalie_stats_dict = {}
+                self.helpers.goalie_game_stats_dict = {}
                 self.helpers.team_stats_dict = {}
+                self.helpers.player_game_dict = {}
                 self.helpers.team_game_dict = {}
                 self.helpers.games_teams_dict = {}
+                self.helpers.game_times_dict = {}
+                self.db_manager.commit()
             self.helpers.add_game(game.get(Games.id))
             select_goalie_stats = database.entity(GoalieStats)
             select_goalie_stats.add_where(GoalieStats.game_id, game.get(Games.id))
